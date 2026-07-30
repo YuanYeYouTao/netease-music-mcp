@@ -1,10 +1,13 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Protocol
 
+import anyio
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
 
 from netease_music_mcp.application import MusicApplication
 from netease_music_mcp.config import Settings
-from netease_music_mcp.lifespan import application_lifespan
 from netease_music_mcp.tools import register_all_tools
 
 
@@ -14,6 +17,8 @@ class MCPServerAdapter(Protocol):
     def run_stdio(self) -> None: ...
 
     def run_streamable_http(self) -> None: ...
+
+    def streamable_http_app(self) -> Starlette: ...
 
 
 class MCPV1ServerAdapter:
@@ -29,7 +34,6 @@ class MCPV1ServerAdapter:
             stateless_http=True,
             json_response=True,
             log_level=settings.log_level,
-            lifespan=application_lifespan(application),
         )
         self.register_tools(application)
 
@@ -37,7 +41,37 @@ class MCPV1ServerAdapter:
         register_all_tools(self.mcp, application)
 
     def run_stdio(self) -> None:
-        self.mcp.run(transport="stdio")
+        anyio.run(self._run_stdio)
+
+    async def _run_stdio(self) -> None:
+        try:
+            await self.mcp.run_stdio_async()
+        finally:
+            await self.application.close()
+
+    def streamable_http_app(self) -> Starlette:
+        """Build HTTP transport with process-owned application resources."""
+
+        app = self.mcp.streamable_http_app()
+        session_manager_lifespan = app.router.lifespan_context
+
+        @asynccontextmanager
+        async def lifespan(starlette_app: Starlette) -> AsyncIterator[None]:
+            async with session_manager_lifespan(starlette_app):
+                try:
+                    yield
+                finally:
+                    await self.application.close()
+
+        app.router.lifespan_context = lifespan
+        return app
 
     def run_streamable_http(self) -> None:
-        self.mcp.run(transport="streamable-http")
+        import uvicorn
+
+        uvicorn.run(
+            self.streamable_http_app(),
+            host=self.settings.mcp_host,
+            port=self.settings.mcp_port,
+            log_level=self.settings.log_level.lower(),
+        )
