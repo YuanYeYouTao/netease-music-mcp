@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "netease-music-mcp"
+version = "0.1.0"
+description = "Read-only NetEase Cloud Music data server for MCP clients"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "netease-music-mcp contributors" }]
+dependencies = [
+  "aiosqlite>=0.21,<1",
+  "httpx>=0.28,<1",
+  "mcp[cli]>=1.28.1,<2",
+  "pydantic>=2.11,<3",
+  "pydantic-settings>=2.8,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.26,<2",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+netease-music-mcp = "netease_music_mcp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/netease_music_mcp"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "netease_integration: opt-in read-only tests against the live NetEase service",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["netease_music_mcp"]
+mypy_path = "src"
+plugins = ["pydantic.mypy"]

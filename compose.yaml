@@ -1,0 +1,23 @@
+services:
+  netease-music-mcp:
+    build: .
+    image: netease-music-mcp:0.1.0
+    init: true
+    read_only: true
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NETEASE_MCP_TRANSPORT: streamable-http
+      NETEASE_MCP_HOST: 0.0.0.0
+      NETEASE_MCP_PORT: 8766
+      NETEASE_CACHE_BACKEND: ${NETEASE_CACHE_BACKEND:-sqlite}
+      NETEASE_CACHE_PATH: /data/cache.sqlite3
+    ports:
+      - "${NETEASE_MCP_PORT:-8766}:8766"
+    volumes:
+      - netease-cache:/data
+    restart: unless-stopped
+
+volumes:
+  netease-cache:
