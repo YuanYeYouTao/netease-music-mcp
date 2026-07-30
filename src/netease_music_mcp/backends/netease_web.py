@@ -84,7 +84,10 @@ class NeteaseWebBackend:
         del detail_level
         payload = await self._client.request_json(
             "POST",
-            "/api/search/get",
+            # The legacy search endpoint can return semantically unrelated
+            # results for artist names and mixed-language queries. This is the
+            # endpoint used by the current desktop web search experience.
+            "/api/cloudsearch/pc",
             data={
                 "s": query,
                 "type": self._SEARCH_TYPES[category],

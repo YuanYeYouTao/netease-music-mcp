@@ -91,7 +91,9 @@ class Settings(BaseSettings):
             "default_page_size": self.default_page_size,
             "max_page_size": self.max_page_size,
             "max_batch_song_ids": self.max_batch_song_ids,
-            "schema": "0.1.0",
+            # Bump when response semantics change so persisted entries created
+            # by an older request profile cannot poison new search results.
+            "schema": "0.1.1-browser-profile",
         }
         encoded = json.dumps(values, sort_keys=True, separators=(",", ":"), default=str)
         return hashlib.sha256(encoded.encode()).hexdigest()
