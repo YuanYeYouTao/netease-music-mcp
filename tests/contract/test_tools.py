@@ -7,11 +7,14 @@ from mcp.types import CallToolResult
 
 from netease_music_mcp.config import Settings
 from netease_music_mcp.domain.models import (
+    AlbumDetail,
+    ArtistDetail,
     GetSongsResult,
     LyricsDocument,
     PlaylistDetail,
     PlaylistStatistics,
     SearchPage,
+    SongDetail,
 )
 from netease_music_mcp.server import create_server
 
@@ -24,6 +27,12 @@ EXPECTED_TOOLS = {
     "get_lyrics",
     "get_user_library",
     "get_playlist_statistics",
+}
+EXPECTED_RESOURCE_TEMPLATES = {
+    "netease://song/{id}",
+    "netease://album/{id}",
+    "netease://artist/{id}",
+    "netease://playlist/{id}",
 }
 
 
@@ -71,6 +80,33 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     for result in (search, songs, playlist, lyrics, statistics):
         assert len(result.content) == 1
         assert len(result.content[0].text) < 80  # type: ignore[union-attr]
+
+
+@pytest.mark.asyncio
+async def test_resource_templates_return_valid_bounded_details() -> None:
+    mcp = fake_adapter().mcp
+    templates = await mcp.list_resource_templates()
+    assert {template.uriTemplate for template in templates} == EXPECTED_RESOURCE_TEMPLATES
+    assert await mcp.list_resources() == []
+
+    song = next(iter(await mcp.read_resource("netease://song/1")))
+    album = next(iter(await mcp.read_resource("netease://album/20")))
+    artist = next(iter(await mcp.read_resource("netease://artist/10")))
+    playlist = next(iter(await mcp.read_resource("netease://playlist/30")))
+
+    assert SongDetail.model_validate_json(song.content)
+    assert AlbumDetail.model_validate_json(album.content).tracks == ()
+    assert ArtistDetail.model_validate_json(artist.content).top_songs == ()
+    assert PlaylistDetail.model_validate_json(playlist.content).tracks == ()
+    assert all(
+        resource.mime_type == "application/json" for resource in (song, album, artist, playlist)
+    )
+
+
+@pytest.mark.asyncio
+async def test_missing_song_resource_is_an_error() -> None:
+    with pytest.raises(ValueError, match="song 404 was not found"):
+        await fake_adapter().mcp.read_resource("netease://song/404")
 
 
 @pytest.mark.asyncio

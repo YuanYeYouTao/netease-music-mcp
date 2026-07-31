@@ -1,10 +1,10 @@
-"""Registration of the eight public MCP tools."""
+"""Registration of public MCP tools and resources."""
 
 from mcp.server.fastmcp import FastMCP
 
 from netease_music_mcp.application import MusicApplication
 
-from . import catalog, library, lyrics, search, statistics
+from . import catalog, library, lyrics, resources, search, statistics
 
 
 def register_all_tools(server: FastMCP[object], application: MusicApplication) -> None:
@@ -15,4 +15,8 @@ def register_all_tools(server: FastMCP[object], application: MusicApplication) -
     statistics.register(server, application)
 
 
-__all__ = ["register_all_tools"]
+def register_all_resources(server: FastMCP[object], application: MusicApplication) -> None:
+    resources.register(server, application)
+
+
+__all__ = ["register_all_resources", "register_all_tools"]

@@ -21,6 +21,14 @@ class NeteaseHttpClient:
     """One shared async client with retry and provider-error normalization."""
 
     BASE_URL = "https://music.163.com"
+    # NetEase's anonymous web endpoints silently return unrelated search
+    # results to non-browser user agents while still reporting HTTP 200. Keep
+    # this profile close to the web player so successful responses are useful.
+    BROWSER_USER_AGENT = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/138.0.0.0 Safari/537.36"
+    )
 
     def __init__(
         self,
@@ -30,9 +38,10 @@ class NeteaseHttpClient:
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         headers = {
-            "User-Agent": "netease-music-mcp/0.1.0 (+read-only MCP data client)",
+            "User-Agent": self.BROWSER_USER_AGENT,
             "Referer": "https://music.163.com/",
             "Accept": "application/json",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
         cookie = authentication.cookie_header()
         if cookie:

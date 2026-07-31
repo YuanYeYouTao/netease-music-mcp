@@ -18,6 +18,8 @@ def imported_roots(path: Path) -> set[str]:
 def test_mcp_sdk_imports_are_isolated() -> None:
     violations = []
     for path in PACKAGE.rglob("*.py"):
+        if path.name.startswith("._"):
+            continue
         relative = path.relative_to(PACKAGE)
         allowed = relative.name in {"mcp_adapter.py", "server.py"} or relative.parts[0] == "tools"
         if "mcp" in imported_roots(path) and not allowed:
@@ -26,7 +28,11 @@ def test_mcp_sdk_imports_are_isolated() -> None:
 
 
 def test_tools_do_not_import_httpx() -> None:
-    assert all("httpx" not in imported_roots(path) for path in (PACKAGE / "tools").glob("*.py"))
+    assert all(
+        "httpx" not in imported_roots(path)
+        for path in (PACKAGE / "tools").glob("*.py")
+        if not path.name.startswith("._")
+    )
 
 
 def test_project_has_no_qq_onebot_or_llm_runtime_dependency() -> None:

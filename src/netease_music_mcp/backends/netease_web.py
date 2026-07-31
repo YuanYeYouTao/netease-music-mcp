@@ -84,7 +84,10 @@ class NeteaseWebBackend:
         del detail_level
         payload = await self._client.request_json(
             "POST",
-            "/api/search/get",
+            # The legacy search endpoint can return semantically unrelated
+            # results for artist names and mixed-language queries. This is the
+            # endpoint used by the current desktop web search experience.
+            "/api/cloudsearch/pc",
             data={
                 "s": query,
                 "type": self._SEARCH_TYPES[category],
@@ -255,14 +258,18 @@ class NeteaseWebBackend:
         self._authentication.require_user_id(user_id)
         items: tuple[LibraryItem, ...]
         if section is LibrarySection.PLAYLISTS:
+            requested_end = page.offset + page.page_size
             payload = await self._client.request_json(
                 "GET",
                 "/api/user/playlist",
-                params={"uid": user_id, "offset": page.offset, "limit": page.page_size},
+                # ponytail: NetEase currently ignores limit; fetch from zero and slice locally
+                # until the provider exposes a reliable paginated endpoint.
+                params={"uid": user_id, "offset": 0, "limit": requested_end},
             )
             response = self._library_response(payload)
-            items = tuple(self._normalizer.playlist(item) for item in response.playlist)
-            total = response.count or (page.offset + len(items) + (1 if response.has_more else 0))
+            playlist_items = response.playlist[page.offset : requested_end]
+            items = tuple(self._normalizer.playlist(item) for item in playlist_items)
+            total = response.count or len(response.playlist) + (1 if response.has_more else 0)
         elif section is LibrarySection.ARTIST_SUBSCRIPTIONS:
             payload = await self._client.request_json(
                 "GET",

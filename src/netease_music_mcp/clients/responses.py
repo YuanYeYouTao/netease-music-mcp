@@ -73,12 +73,12 @@ class ProviderPlaylist(ProviderModel):
     name: str = ""
     creator: ProviderCreator | None = None
     cover_img_url: str | None = Field(default=None, alias="coverImgUrl")
-    description: str = ""
+    description: str | None = ""
     track_count: int = Field(default=0, alias="trackCount")
     play_count: int = Field(default=0, alias="playCount")
     subscribed_count: int = Field(default=0, alias="subscribedCount")
     tags: list[str] = Field(default_factory=list)
-    tracks: list[ProviderSong] = Field(default_factory=list)
+    tracks: list[ProviderSong] | None = None
     track_ids: list[ProviderTrackId] = Field(default_factory=list, alias="trackIds")
     privileges: list[ProviderPrivilege] = Field(default_factory=list)
 

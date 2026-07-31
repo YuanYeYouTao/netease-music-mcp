@@ -2,9 +2,9 @@
 
 这些能力只记录路线，不在 0.1.0 中预建空接口。
 
-## 0.2.0
+## 0.2.0（当前开发版本）
 
-- MCP Resources：`netease://song/{id}`、`album`、`artist`、`playlist`。
+- 已实现 MCP Resources：`netease://song/{id}`、`album`、`artist`、`playlist`。
 
 ## 0.3.0
 
