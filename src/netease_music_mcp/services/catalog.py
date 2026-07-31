@@ -32,6 +32,7 @@ class CatalogService(ServiceBase):
         page_size: int | None = None,
         detail_level: DetailLevel = DetailLevel.SUMMARY,
     ) -> SearchPage:
+        self.require_supported("search")
         normalized_query = query.strip()
         if not normalized_query:
             raise InvalidRequestError("query cannot be empty")
@@ -58,6 +59,7 @@ class CatalogService(ServiceBase):
         song_ids: tuple[str, ...],
         detail_level: DetailLevel = DetailLevel.SUMMARY,
     ) -> GetSongsResult:
+        self.require_supported("get_songs")
         if not song_ids:
             raise InvalidRequestError("song_ids cannot be empty")
         if len(song_ids) > self.settings.max_batch_song_ids:
@@ -78,6 +80,7 @@ class CatalogService(ServiceBase):
     async def get_recommendations(
         self, page: int = 1, page_size: int | None = None
     ) -> RecommendationPage:
+        self.require_supported("get_recommendations")
         request = self.page_request(page, page_size)
         # This endpoint can vary with the authenticated browser session, so do
         # not persist its response in a public cache scope.
@@ -86,6 +89,7 @@ class CatalogService(ServiceBase):
     async def get_similar_songs(
         self, song_id: str, page: int = 1, page_size: int | None = None
     ) -> SimilarSongsPage:
+        self.require_supported("get_similar_songs")
         normalized_id = self.identifier(song_id, "song_id")
         request = self.page_request(page, page_size)
         key = self.cache_key(
@@ -105,12 +109,14 @@ class CatalogService(ServiceBase):
         page: int = 1,
         page_size: int | None = None,
     ) -> NewSongsPage:
+        self.require_supported("get_new_songs")
         request = self.page_request(page, page_size)
         # This personalized endpoint can vary with the authenticated browser session.
         result = await self.backend.get_new_songs(area, request)
         return result
 
     async def get_rankings(self, page: int = 1, page_size: int | None = None) -> RankingPage:
+        self.require_supported("get_rankings")
         request = self.page_request(page, page_size)
         key = self.cache_key("get_rankings", {"page": request.page, "page_size": request.page_size})
         cached = await self.cache.get(key)
@@ -127,6 +133,7 @@ class CatalogService(ServiceBase):
         track_page: int = 1,
         track_page_size: int | None = None,
     ) -> AlbumDetail:
+        self.require_supported("get_album")
         normalized_id = self.identifier(album_id, "album_id")
         request = self.page_request(track_page, track_page_size)
         parameters = {
@@ -149,6 +156,7 @@ class CatalogService(ServiceBase):
         include_top_songs: bool = False,
         top_song_count: int | None = None,
     ) -> ArtistDetail:
+        self.require_supported("get_artist")
         normalized_id = self.identifier(artist_id, "artist_id")
         count = self.settings.default_top_song_count if top_song_count is None else top_song_count
         if count < 1 or count > self.settings.max_top_song_count:
@@ -175,6 +183,7 @@ class CatalogService(ServiceBase):
         track_page: int = 1,
         track_page_size: int | None = None,
     ) -> PlaylistDetail:
+        self.require_supported("get_playlist")
         normalized_id = self.identifier(playlist_id, "playlist_id")
         request = self.page_request(track_page, track_page_size)
         parameters = {

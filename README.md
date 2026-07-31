@@ -4,7 +4,7 @@
 结构化的方式提供歌曲、歌手、专辑、歌单、歌词和登录用户音乐库数据，可供 Claude Desktop、
 Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
-当前开发版本：`0.4.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
+当前开发版本：`0.5.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
@@ -13,7 +13,7 @@ Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
 ## 安装
 
-需要 Python 3.12 与 [uv](https://docs.astral.sh/uv/)：
+本地开发需要 Python 3.12 与 [uv](https://docs.astral.sh/uv/)：
 
 ```bash
 git clone <repository-url> netease-music-mcp
@@ -23,6 +23,9 @@ uv sync --all-extras
 
 公开查询无需 Cookie。访问私人音乐库前，将 `.env.example` 复制为 `.env` 并配置
 `NETEASE_COOKIE` 与 `NETEASE_USER_ID`。服务不会自动读取浏览器 Cookie。
+
+Windows 与 macOS 部署建议直接使用 Docker Desktop；宿主机不需要安装 Python，网易云 Cookie
+通过项目目录的 `.env` 注入容器。Docker Compose 使用具名缓存卷，不依赖宿主机路径格式。
 
 ## 启动
 
@@ -156,12 +159,19 @@ HTTP 示例：
 ## Docker
 
 ```bash
-docker build -t netease-music-mcp:0.4.0 .
+docker build -t netease-music-mcp:0.5.0 .
 docker compose up --build
 ```
 
-Compose 从本地 `.env` 读取配置，将 SQLite 缓存放入具名卷，并暴露可配置端口。容器以
-非 root 用户运行，健康检查只检查 TCP 监听，不调用真实搜索接口。
+Windows PowerShell 使用同样的 Docker 命令；Cookie 可用以下命令准备：
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+macOS、Windows 和 Linux 的 Compose 行为保持一致：从本地 `.env` 读取配置，将 SQLite 缓存放入
+具名卷，并暴露可配置端口。容器以非 root 用户运行，健康检查只检查 TCP 监听，不调用真实搜索接口。
 
 ## 故障排查
 

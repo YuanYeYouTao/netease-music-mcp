@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 开始 0.5.0：补充 backend 能力声明，未支持的工具操作返回 `unsupported_operation`；保持 15 个工具、
+  4 个 Resource、统一领域模型和本地 Cookie 认证不变。
+- Docker Compose 镜像版本更新为 0.5.0，Windows 与 macOS 通过 Docker Desktop 使用同一运行方式。
+
 - 开始 0.4.0：增加默认启用、可通过 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭的创建歌单、增删曲目和点赞工具。
 - 写调用必须显式传入 `confirm=true`；不提供删除歌单接口，便于可恢复的真实账号测试。
 - 修复创建歌单请求缺少 `os=pc` Cookie 且将 `privacy` 发送为字符串，导致上游返回 403 `illegal request`。

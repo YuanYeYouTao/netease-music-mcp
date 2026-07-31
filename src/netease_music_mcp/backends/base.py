@@ -24,9 +24,40 @@ from netease_music_mcp.domain.models import (
 )
 from netease_music_mcp.domain.pagination import PageRequest
 
+CORE_BACKEND_OPERATIONS = frozenset(
+    {
+        "search",
+        "get_songs",
+        "get_album",
+        "get_artist",
+        "get_playlist",
+        "get_user_library:playlists",
+    }
+)
+
+ALL_BACKEND_OPERATIONS = CORE_BACKEND_OPERATIONS | frozenset(
+    {
+        "get_recommendations",
+        "get_similar_songs",
+        "get_new_songs",
+        "get_rankings",
+        "get_lyrics",
+        "get_playlist_statistics",
+        "get_user_library:artist_subscriptions",
+        "get_user_library:album_subscriptions",
+        "get_user_library:daily_recommendations",
+        "get_user_library:play_history",
+        "get_user_library:liked_songs",
+        "create_playlist",
+        "update_playlist_tracks",
+        "set_song_like",
+    }
+)
+
 
 class MusicCatalogBackend(Protocol):
     name: str
+    supported_operations: frozenset[str]
 
     async def search(
         self,

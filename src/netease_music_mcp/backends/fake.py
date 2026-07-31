@@ -34,11 +34,14 @@ from netease_music_mcp.domain.models import (
 )
 from netease_music_mcp.domain.pagination import PageInfo, PageRequest
 
+from .base import ALL_BACKEND_OPERATIONS
+
 
 class FakeMusicCatalogBackend:
     """Deterministic in-process backend used by the default test suite."""
 
     name = "fake"
+    supported_operations = ALL_BACKEND_OPERATIONS
 
     def __init__(self) -> None:
         artist = ArtistSummary(id="10", name="Example Artist", aliases=("示例歌手",))

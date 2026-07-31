@@ -27,6 +27,7 @@ class LibraryService(ServiceBase):
         page_size: int | None = None,
         history_scope: HistoryScope = HistoryScope.WEEK,
     ) -> UserLibraryPage:
+        self.require_supported(f"get_user_library:{section.value}")
         resolved_user_id = self.authentication.require_user_id(user_id)
         normalized_user_id = self.identifier(resolved_user_id, "user_id")
         request = self.page_request(page, page_size)

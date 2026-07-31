@@ -3,9 +3,15 @@ from typing import Any
 from netease_music_mcp.backends.base import MusicCatalogBackend
 from netease_music_mcp.cache.base import CacheBackend, build_cache_key
 from netease_music_mcp.config import Settings
-from netease_music_mcp.domain.errors import InvalidRequestError
+from netease_music_mcp.domain.errors import InvalidRequestError, UnsupportedOperationError
 from netease_music_mcp.domain.identifiers import normalize_id
 from netease_music_mcp.domain.pagination import PageRequest
+
+
+def require_supported(backend: MusicCatalogBackend, operation: str) -> None:
+    supported_operations = getattr(backend, "supported_operations", None)
+    if supported_operations is None or operation not in supported_operations:
+        raise UnsupportedOperationError(f"{backend.name} does not support {operation}")
 
 
 class ServiceBase:
@@ -28,6 +34,9 @@ class ServiceBase:
                 f"page_size must be between 1 and {self.settings.max_page_size}"
             )
         return PageRequest(page=page, page_size=resolved_size)
+
+    def require_supported(self, operation: str) -> None:
+        require_supported(self.backend, operation)
 
     @staticmethod
     def identifier(value: str, kind: str) -> str:
