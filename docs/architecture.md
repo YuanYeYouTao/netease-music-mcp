@@ -33,7 +33,7 @@ Backend 与 Service 不需要重写。
 | --- | --- | --- |
 | Python | `>=3.12` | 产品技术基线 |
 | MCP SDK | `>=1.28.1,<2` | 0.2.0 兼容目标 |
-| Tool / Resource Template 数量 | 12 / 4 | 0.3.0 产品范围 |
+| Tool / Resource Template 数量 | 15 / 4 | 0.4.0 产品范围 |
 | ID 公共类型 | 十进制字符串 | 跨 Client 数字精度要求；上游 ID 语义 |
 | page | `>=1` | 统一一基分页模型 |
 | port | `1..65535` | TCP 协议 |

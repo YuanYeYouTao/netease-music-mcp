@@ -4,6 +4,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    PlaylistTrackOperation,
     ReleaseArea,
     SearchCategory,
 )
@@ -19,6 +20,7 @@ from netease_music_mcp.domain.models import (
     SearchPage,
     SimilarSongsPage,
     UserLibraryPage,
+    WriteResult,
 )
 from netease_music_mcp.domain.pagination import PageRequest
 
@@ -74,5 +76,16 @@ class MusicCatalogBackend(Protocol):
         page: PageRequest,
         history_scope: HistoryScope,
     ) -> UserLibraryPage: ...
+
+    async def create_playlist(self, name: str, private: bool) -> WriteResult: ...
+
+    async def update_playlist_tracks(
+        self,
+        playlist_id: str,
+        operation: PlaylistTrackOperation,
+        song_ids: tuple[str, ...],
+    ) -> WriteResult: ...
+
+    async def set_song_like(self, song_id: str, liked: bool) -> WriteResult: ...
 
     async def close(self) -> None: ...

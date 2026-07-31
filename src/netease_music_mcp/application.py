@@ -6,6 +6,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    PlaylistTrackOperation,
     ReleaseArea,
     SearchCategory,
 )
@@ -22,12 +23,14 @@ from netease_music_mcp.domain.models import (
     SearchPage,
     SimilarSongsPage,
     UserLibraryPage,
+    WriteResult,
 )
 from netease_music_mcp.services import (
     CatalogService,
     LibraryService,
     LyricsService,
     StatisticsService,
+    WriteService,
 )
 
 
@@ -46,6 +49,7 @@ class MusicApplication:
         self.library = LibraryService(backend, cache, settings, authentication)
         self.lyrics = LyricsService(backend, cache, settings)
         self.statistics = StatisticsService(self.catalog)
+        self.writes = WriteService(backend, settings, authentication)
 
     async def music_search(
         self,
@@ -137,6 +141,25 @@ class MusicApplication:
         self, playlist_id: str, track_limit: int | None = None
     ) -> PlaylistStatistics:
         return await self.statistics.get_playlist_statistics(playlist_id, track_limit)
+
+    async def create_playlist(
+        self, name: str, private: bool = False, confirm: bool = False
+    ) -> WriteResult:
+        return await self.writes.create_playlist(name, private, confirm)
+
+    async def update_playlist_tracks(
+        self,
+        playlist_id: str,
+        operation: PlaylistTrackOperation,
+        song_ids: tuple[str, ...],
+        confirm: bool = False,
+    ) -> WriteResult:
+        return await self.writes.update_playlist_tracks(playlist_id, operation, song_ids, confirm)
+
+    async def set_song_like(
+        self, song_id: str, liked: bool = True, confirm: bool = False
+    ) -> WriteResult:
+        return await self.writes.set_song_like(song_id, liked, confirm)
 
     async def close(self) -> None:
         await self.backend.close()

@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     mcp_path: str = "/mcp"
 
     backend: BackendName = BackendName.NETEASE_WEB
+    write_operations_enabled: bool = True
     cookie: SecretStr | None = Field(default=None, repr=False)
     music_u: SecretStr | None = Field(default=None, repr=False)
     csrf: SecretStr | None = Field(default=None, repr=False)
@@ -93,7 +94,7 @@ class Settings(BaseSettings):
             "max_batch_song_ids": self.max_batch_song_ids,
             # Bump when response semantics change so persisted entries created
             # by an older request profile cannot poison new search results.
-            "schema": "0.3.0-discovery",
+            "schema": "0.4.0-writes",
         }
         encoded = json.dumps(values, sort_keys=True, separators=(",", ":"), default=str)
         return hashlib.sha256(encoded.encode()).hexdigest()

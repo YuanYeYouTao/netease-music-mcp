@@ -6,8 +6,17 @@ from netease_music_mcp.backends.fake import FakeMusicCatalogBackend
 from netease_music_mcp.cache.memory import MemoryCacheBackend
 from netease_music_mcp.clients.authentication import AuthenticationProvider
 from netease_music_mcp.config import Settings
-from netease_music_mcp.domain.enums import DetailLevel, LibrarySection, SearchCategory
-from netease_music_mcp.domain.errors import AuthenticationRequiredError, InvalidRequestError
+from netease_music_mcp.domain.enums import (
+    DetailLevel,
+    LibrarySection,
+    PlaylistTrackOperation,
+    SearchCategory,
+)
+from netease_music_mcp.domain.errors import (
+    AuthenticationRequiredError,
+    InvalidRequestError,
+    UnsupportedOperationError,
+)
 from netease_music_mcp.domain.models import SongDetail
 
 
@@ -104,6 +113,34 @@ async def test_discovery_pages_and_liked_songs_use_domain_models(
     assert releases.items[0].id == "1"
     assert rankings.items[0].id == "30"
     assert liked.items[0].id == "1"
+
+
+@pytest.mark.asyncio
+async def test_write_operations_require_confirmation_and_restore_fake_state(
+    application: MusicApplication,
+) -> None:
+    with pytest.raises(InvalidRequestError, match="confirm"):
+        await application.set_song_like("1")
+    created = await application.create_playlist("temporary", confirm=True)
+    assert created.playlist_id is not None
+    added = await application.update_playlist_tracks(
+        created.playlist_id, PlaylistTrackOperation.ADD, ("1",), confirm=True
+    )
+    assert added.song_ids == ("1",)
+    await application.update_playlist_tracks(
+        created.playlist_id, PlaylistTrackOperation.REMOVE, ("1",), confirm=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_write_operations_can_be_disabled(fake_settings: Settings) -> None:
+    settings = fake_settings.model_copy(update={"write_operations_enabled": False})
+    authentication = AuthenticationProvider.from_settings(settings)
+    app = MusicApplication(
+        FakeMusicCatalogBackend(), MemoryCacheBackend(), settings, authentication
+    )
+    with pytest.raises(UnsupportedOperationError, match="disabled"):
+        await app.create_playlist("blocked", confirm=True)
 
 
 class CountingFakeBackend(FakeMusicCatalogBackend):

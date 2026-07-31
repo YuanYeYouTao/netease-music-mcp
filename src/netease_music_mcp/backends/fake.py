@@ -4,6 +4,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    PlaylistTrackOperation,
     ReleaseArea,
     SearchCategory,
 )
@@ -29,6 +30,7 @@ from netease_music_mcp.domain.models import (
     SongDetail,
     SongSummary,
     UserLibraryPage,
+    WriteResult,
 )
 from netease_music_mcp.domain.pagination import PageInfo, PageRequest
 
@@ -90,6 +92,10 @@ class FakeMusicCatalogBackend:
             tags=("test",),
             canonical_url="https://music.163.com/#/playlist?id=30",
         )
+        self.playlists = {self.playlist_summary.id: self.playlist_summary}
+        self.playlist_tracks = {self.playlist_summary.id: list(self.songs)}
+        self.liked_song_ids = set(self.songs)
+        self._next_playlist_id = 100
         self.ranking = RankingSummary(
             id="30",
             name="Example Ranking",
@@ -125,7 +131,7 @@ class FakeMusicCatalogBackend:
         elif category is SearchCategory.ALBUM:
             values = [self.album_summary]
         else:
-            values = [self.playlist_summary]
+            values = list(self.playlists.values())
         sliced = values[page.offset : page.offset + page.page_size]
         return SearchPage(
             query=query,
@@ -225,16 +231,17 @@ class FakeMusicCatalogBackend:
     async def get_playlist(
         self, playlist_id: str, include_tracks: bool, track_page: PageRequest
     ) -> PlaylistDetail:
-        if playlist_id != self.playlist_summary.id:
+        playlist = self.playlists.get(playlist_id)
+        if playlist is None:
             raise ResourceNotFoundError(f"playlist {playlist_id} was not found")
-        all_tracks = tuple(self.songs.values())
+        all_tracks = tuple(self.songs[song_id] for song_id in self.playlist_tracks[playlist_id])
         tracks = (
             all_tracks[track_page.offset : track_page.offset + track_page.page_size]
             if include_tracks
             else ()
         )
         return PlaylistDetail(
-            playlist=self.playlist_summary,
+            playlist=playlist.model_copy(update={"track_count": len(all_tracks)}),
             tracks=tracks,
             track_page=PageInfo.from_request(track_page, len(all_tracks)),
             privileges_available=sum(song.available for song in all_tracks),
@@ -279,7 +286,7 @@ class FakeMusicCatalogBackend:
         del history_scope
         values: tuple[LibraryItem, ...]
         if section is LibrarySection.PLAYLISTS:
-            values = (self.playlist_summary,)
+            values = tuple(self.playlists.values())
         elif section is LibrarySection.ARTIST_SUBSCRIPTIONS:
             values = (
                 ArtistSummary(
@@ -291,7 +298,8 @@ class FakeMusicCatalogBackend:
         elif section is LibrarySection.LIKED_SONGS:
             values = tuple(
                 SongSummary(**song.model_dump(include=set(SongSummary.model_fields)))
-                for song in self.songs.values()
+                for song_id, song in self.songs.items()
+                if song_id in self.liked_song_ids
             )
         else:
             values = tuple(
@@ -308,6 +316,54 @@ class FakeMusicCatalogBackend:
             total=info.total,
             has_more=info.has_more,
         )
+
+    async def create_playlist(self, name: str, private: bool) -> WriteResult:
+        del private
+        playlist_id = str(self._next_playlist_id)
+        self._next_playlist_id += 1
+        playlist = self.playlist_summary.model_copy(
+            update={"id": playlist_id, "name": name, "track_count": 0}
+        )
+        self.playlists[playlist_id] = playlist
+        self.playlist_tracks[playlist_id] = []
+        return WriteResult(action="create_playlist", code=200, playlist_id=playlist_id)
+
+    async def update_playlist_tracks(
+        self,
+        playlist_id: str,
+        operation: PlaylistTrackOperation,
+        song_ids: tuple[str, ...],
+    ) -> WriteResult:
+        if playlist_id not in self.playlist_tracks:
+            raise ResourceNotFoundError(f"playlist {playlist_id} was not found")
+        if any(song_id not in self.songs for song_id in song_ids):
+            raise ResourceNotFoundError("one or more songs were not found")
+        tracks = self.playlist_tracks[playlist_id]
+        if operation is PlaylistTrackOperation.ADD:
+            tracks.extend(song_id for song_id in song_ids if song_id not in tracks)
+        else:
+            self.playlist_tracks[playlist_id] = [
+                song_id for song_id in tracks if song_id not in song_ids
+            ]
+        self.playlists[playlist_id] = self.playlists[playlist_id].model_copy(
+            update={"track_count": len(self.playlist_tracks[playlist_id])}
+        )
+        return WriteResult(
+            action="update_playlist_tracks",
+            code=200,
+            playlist_id=playlist_id,
+            song_ids=song_ids,
+            operation=operation,
+        )
+
+    async def set_song_like(self, song_id: str, liked: bool) -> WriteResult:
+        if song_id not in self.songs:
+            raise ResourceNotFoundError(f"song {song_id} was not found")
+        if liked:
+            self.liked_song_ids.add(song_id)
+        else:
+            self.liked_song_ids.discard(song_id)
+        return WriteResult(action="set_song_like", code=200, song_ids=(song_id,), liked=liked)
 
     async def close(self) -> None:
         self.closed = True

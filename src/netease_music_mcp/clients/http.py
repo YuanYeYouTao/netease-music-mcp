@@ -15,6 +15,7 @@ from netease_music_mcp.domain.errors import (
 from .authentication import AuthenticationProvider
 
 JsonObject = dict[str, Any]
+RequestValue = str | int | bool
 
 
 class NeteaseHttpClient:
@@ -44,6 +45,7 @@ class NeteaseHttpClient:
             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
         }
         cookie = authentication.cookie_header()
+        self._csrf_token = authentication.csrf_token()
         if cookie:
             headers["Cookie"] = cookie
         timeout = httpx.Timeout(
@@ -70,13 +72,16 @@ class NeteaseHttpClient:
         method: str,
         path: str,
         *,
-        params: Mapping[str, str | int] | None = None,
-        data: Mapping[str, str | int] | None = None,
+        params: Mapping[str, RequestValue] | None = None,
+        data: Mapping[str, RequestValue] | None = None,
+        headers: Mapping[str, str] | None = None,
     ) -> JsonObject:
         response: httpx.Response | None = None
         for attempt in range(self._retry_attempts + 1):
             try:
-                response = await self._client.request(method, path, params=params, data=data)
+                response = await self._client.request(
+                    method, path, params=params, data=data, headers=headers
+                )
             except (httpx.TimeoutException, httpx.NetworkError) as exc:
                 if attempt >= self._retry_attempts:
                     raise UpstreamUnavailableError("NetEase request failed") from exc
@@ -107,6 +112,44 @@ class NeteaseHttpClient:
         if not isinstance(payload, dict):
             raise UpstreamResponseError("NetEase returned a non-object JSON response")
         return payload
+
+    async def request_weapi_json(
+        self,
+        api_path: str,
+        data: Mapping[str, object],
+        *,
+        cookie_overrides: Mapping[str, str] | None = None,
+    ) -> JsonObject:
+        from .weapi import encrypt_weapi
+
+        if not api_path.startswith("/api/"):
+            raise ValueError("WeAPI paths must start with '/api/'")
+        payload = dict(data)
+        payload["csrf_token"] = self._csrf_token
+        payload["e_r"] = False
+        headers = None
+        if cookie_overrides:
+            cookie = self._client.headers.get("Cookie")
+            headers = {
+                "Cookie": self._cookie_with_overrides(cookie, cookie_overrides),
+            }
+        return await self.request_json(
+            "POST",
+            f"/weapi/{api_path.removeprefix('/api/')}",
+            data=encrypt_weapi(payload),
+            headers=headers,
+        )
+
+    @staticmethod
+    def _cookie_with_overrides(cookie: str | None, overrides: Mapping[str, str]) -> str:
+        keys = {key.lower() for key in overrides}
+        parts = [
+            part.strip()
+            for part in (cookie or "").split(";")
+            if part.strip() and part.partition("=")[0].strip().lower() not in keys
+        ]
+        parts.extend(f"{key}={value}" for key, value in overrides.items())
+        return "; ".join(parts)
 
     def _backoff(self, attempt: int) -> float:
         return float(self._retry_initial_seconds * (2**attempt))

@@ -50,6 +50,16 @@ class AuthenticationProvider:
             raise ValueError("cookie configuration contains an invalid line break")
         return value or None
 
+    def csrf_token(self) -> str:
+        if self._csrf:
+            return self._csrf
+        if self._cookie:
+            for part in self._cookie.split(";"):
+                key, separator, value = part.strip().partition("=")
+                if separator and key == "__csrf":
+                    return value
+        return ""
+
     def require_user_id(self, requested_user_id: str | None) -> str:
         if self.state is AuthenticationState.ANONYMOUS:
             raise AuthenticationRequiredError(
