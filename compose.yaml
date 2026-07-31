@@ -13,6 +13,10 @@ services:
       NETEASE_MCP_PORT: 8766
       NETEASE_CACHE_BACKEND: ${NETEASE_CACHE_BACKEND:-sqlite}
       NETEASE_CACHE_PATH: /data/cache.sqlite3
+      NETEASE_COOKIE: ${NETEASE_COOKIE:-}
+      NETEASE_MUSIC_U: ${NETEASE_MUSIC_U:-}
+      NETEASE_CSRF: ${NETEASE_CSRF:-}
+      NETEASE_USER_ID: ${NETEASE_USER_ID:-}
     ports:
       - "${NETEASE_MCP_PORT:-8766}:8766"
     volumes:

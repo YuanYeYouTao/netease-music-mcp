@@ -24,8 +24,10 @@ uv sync --all-extras
 公开查询无需 Cookie。访问私人音乐库前，将 `.env.example` 复制为 `.env` 并配置
 `NETEASE_COOKIE` 与 `NETEASE_USER_ID`。服务不会自动读取浏览器 Cookie。
 
-Windows 与 macOS 部署建议直接使用 Docker Desktop；宿主机不需要安装 Python，网易云 Cookie
-通过项目目录的 `.env` 注入容器。Docker Compose 使用具名缓存卷，不依赖宿主机路径格式。
+Windows 与 macOS 部署建议直接使用 Docker Desktop；仅用 `.env` 启动容器时宿主机不需要 Python，
+网易云 Cookie 通过项目目录的 `.env` 注入容器。Docker Compose 使用具名缓存卷，不依赖宿主机路径格式。
+如果使用下方 `auth` 宿主机导入命令，则宿主机需要 Python 3.12 与 uv；Keychain/DPAPI 不能在
+Linux 容器内部代替宿主机读取。
 
 ## 启动
 
@@ -55,6 +57,31 @@ uv run netease-music-mcp cache clear
 
 `config` 仅显示非敏感值、配置来源和 Cookie 是否已配置，不会显示 Cookie 内容。
 `doctor` 检查配置、缓存可写性、公开查询和（已配置时）登录状态。
+
+## 宿主机本地认证导入
+
+Windows/macOS 桌面客户端登录态可由宿主机在运行前读取。导入器只读取网易云桌面客户端的
+本地 MMKV Cookie 归档，并兼容 CEF Chromium Cookie 数据库；首次运行必须确认。读取加密的
+CEF Cookie 时，macOS 使用 Keychain，Windows 使用 DPAPI。它不会扫描浏览器，不会打印 Cookie，
+也不会把 Cookie 写入仓库或镜像。
+
+仅查看脱敏结果：
+
+```bash
+uv run netease-music-mcp auth import-local
+```
+
+确认后直接以一次性环境变量启动 Docker（默认重新构建镜像）：
+
+```bash
+uv run netease-music-mcp auth run-docker --detach
+```
+
+`run-docker` 只把 Cookie 传给本次 `docker compose` 子进程；接口请求使用固定的 `appver=2.9.7`，
+导入器不落盘。
+使用 `--detach` 时，Cookie 会随运行中的本地容器存在；停止后执行 `docker compose down` 清理。
+非交互环境必须显式使用 `--yes`，否则导入会拒绝执行。客户端未登录、存储不存在或系统密钥
+访问失败时会返回明确错误，不会使用空 Cookie 继续启动。
 
 ## 十五个工具
 

@@ -17,8 +17,11 @@
 
 ## 0.5.0（当前开发版本）
 
-- 通过 Docker Desktop 兼容 Windows 与 macOS，保持宿主机无 Python/路径差异要求。
+- 服务容器通过 Docker Desktop 兼容 Windows 与 macOS，不要求宿主机处理 Python/路径差异；
+  宿主机认证导入命令另需 Python/uv 访问系统密钥。
 - 保持现有 15 个工具、4 个 Resource URI 和本地 Cookie 认证方式不变。
+- 增加宿主机 `auth import-local` / `auth run-docker`：读取 Windows/macOS 桌面客户端登录态，
+  经确认后仅注入当前 Docker 进程。
 - 通过 `MusicCatalogBackend.supported_operations` 声明能力；未实现的能力返回
   `unsupported_operation`，不以空数据伪装成功。
 - 统一歌曲、歌手、专辑、歌单和用户歌库模型；核心能力为搜索、歌曲、专辑、歌手、歌单和用户歌单。
