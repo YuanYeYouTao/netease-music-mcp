@@ -8,8 +8,8 @@ Codex、IDE Agent、Yuki 等 MCP Client 使用。
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
-地区或 DRM 限制。写操作默认启用，可用 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭；每次
-写调用仍必须显式传入 `confirm=true`，且不提供删除歌单接口。
+地区或 DRM 限制。写操作默认关闭；仅当显式设置 `NETEASE_WRITE_OPERATIONS_ENABLED=true` 后才会
+启用，且每次写调用仍必须传入 `confirm=true`。项目不提供删除歌单接口。
 
 ## 安装
 

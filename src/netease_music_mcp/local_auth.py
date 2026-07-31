@@ -17,6 +17,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 _COOKIE_NAMES = (
@@ -267,6 +269,22 @@ def _decrypt_aes_gcm(value: bytes, key: bytes) -> str:
         raise LocalAuthError("decrypted desktop cookie is not valid UTF-8") from exc
 
 
+def _decrypt_mac_aes_cbc(value: bytes, key: bytes) -> str:
+    if not value.startswith(b"v10") or len(value) <= 3:
+        raise LocalAuthError("unsupported macOS Chromium cookie encryption format")
+    try:
+        decryptor = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).decryptor()
+        padded = decryptor.update(value[3:]) + decryptor.finalize()
+        unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+        plaintext = unpadder.update(padded) + unpadder.finalize()
+    except ValueError as exc:
+        raise LocalAuthError("desktop cookie decryption failed") from exc
+    try:
+        return plaintext.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise LocalAuthError("decrypted desktop cookie is not valid UTF-8") from exc
+
+
 def _mac_keychain_key() -> bytes:
     candidates = (
         ("Chromium", "Chromium Safe Storage"),
@@ -344,7 +362,7 @@ def _mac_cookie_decryptor() -> Callable[[bytes], str]:
         nonlocal key
         if key is None:
             key = _mac_keychain_key()
-        return _decrypt_aes_gcm(value, key)
+        return _decrypt_mac_aes_cbc(value, key)
 
     return decrypt
 

@@ -61,16 +61,17 @@ class AuthenticationProvider:
         return ""
 
     def require_user_id(self, requested_user_id: str | None) -> str:
-        if self.state is AuthenticationState.ANONYMOUS:
-            raise AuthenticationRequiredError(
-                "private music library access requires authentication"
-            )
+        self.require_authenticated()
         user_id = requested_user_id or self.configured_user_id
         if not user_id:
             raise AuthenticationRequiredError(
                 "NETEASE_USER_ID is required when no user_id is supplied"
             )
         return user_id
+
+    def require_authenticated(self) -> None:
+        if self.state is AuthenticationState.ANONYMOUS:
+            raise AuthenticationRequiredError("this operation requires NetEase authentication")
 
     def authentication_scope(self, user_id: str | None) -> str:
         return f"user:{user_id}" if user_id else "public"

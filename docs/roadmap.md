@@ -12,10 +12,10 @@
 
 ## 0.4.0（已实现）
 
-- 默认启用、可通过 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭的写操作模块：创建歌单、增删歌曲、点赞。
+- 默认关闭、仅在 `NETEASE_WRITE_OPERATIONS_ENABLED=true` 时启用的写操作模块：创建歌单、增删歌曲、点赞。
 - 每次写调用还必须显式传入 `confirm=true`；真实账号测试只允许使用可恢复的目标。
 
-## 0.5.0（当前开发版本）
+## 0.5.0（已实现）
 
 - 服务容器通过 Docker Desktop 兼容 Windows 与 macOS，不要求宿主机处理 Python/路径差异；
   宿主机认证导入命令另需 Python/uv 访问系统密钥。

@@ -37,6 +37,10 @@ def test_illegal_pagination_configuration_fails_at_startup() -> None:
         Settings(default_page_size=101, max_page_size=100)
 
 
+def test_write_operations_are_disabled_by_default() -> None:
+    assert Settings().write_operations_enabled is False
+
+
 @pytest.mark.asyncio
 async def test_page_size_is_not_silently_clamped(application: MusicApplication) -> None:
     with pytest.raises(InvalidRequestError, match="between"):
@@ -148,6 +152,25 @@ async def test_write_operations_can_be_disabled(fake_settings: Settings) -> None
     )
     with pytest.raises(UnsupportedOperationError, match="disabled"):
         await app.create_playlist("blocked", confirm=True)
+
+
+@pytest.mark.asyncio
+async def test_write_operations_do_not_require_configured_user_id() -> None:
+    settings = Settings(
+        backend="fake",
+        cache_backend="none",
+        write_operations_enabled=True,
+        cookie="MUSIC_U=test-cookie",
+        user_id=None,
+    )
+    authentication = AuthenticationProvider.from_settings(settings)
+    app = MusicApplication(
+        FakeMusicCatalogBackend(), MemoryCacheBackend(), settings, authentication
+    )
+
+    created = await app.create_playlist("authenticated", confirm=True)
+
+    assert created.playlist_id is not None
 
 
 class CountingFakeBackend(FakeMusicCatalogBackend):

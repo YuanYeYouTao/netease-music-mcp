@@ -75,20 +75,22 @@ class NeteaseHttpClient:
         params: Mapping[str, RequestValue] | None = None,
         data: Mapping[str, RequestValue] | None = None,
         headers: Mapping[str, str] | None = None,
+        retryable: bool = True,
     ) -> JsonObject:
         response: httpx.Response | None = None
-        for attempt in range(self._retry_attempts + 1):
+        retry_attempts = self._retry_attempts if retryable else 0
+        for attempt in range(retry_attempts + 1):
             try:
                 response = await self._client.request(
                     method, path, params=params, data=data, headers=headers
                 )
             except (httpx.TimeoutException, httpx.NetworkError) as exc:
-                if attempt >= self._retry_attempts:
+                if attempt >= retry_attempts:
                     raise UpstreamUnavailableError("NetEase request failed") from exc
                 await asyncio.sleep(self._backoff(attempt))
                 continue
             if response.status_code == 429 or response.status_code >= 500:
-                if attempt < self._retry_attempts:
+                if attempt < retry_attempts:
                     await asyncio.sleep(self._backoff(attempt))
                     continue
             break
@@ -119,6 +121,7 @@ class NeteaseHttpClient:
         data: Mapping[str, object],
         *,
         cookie_overrides: Mapping[str, str] | None = None,
+        retryable: bool = True,
     ) -> JsonObject:
         from .weapi import encrypt_weapi
 
@@ -138,6 +141,7 @@ class NeteaseHttpClient:
             f"/weapi/{api_path.removeprefix('/api/')}",
             data=encrypt_weapi(payload),
             headers=headers,
+            retryable=retryable,
         )
 
     @staticmethod

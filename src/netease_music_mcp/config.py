@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     mcp_path: str = "/mcp"
 
     backend: BackendName = BackendName.NETEASE_WEB
-    write_operations_enabled: bool = True
+    write_operations_enabled: bool = False
     cookie: SecretStr | None = Field(default=None, repr=False)
     music_u: SecretStr | None = Field(default=None, repr=False)
     csrf: SecretStr | None = Field(default=None, repr=False)

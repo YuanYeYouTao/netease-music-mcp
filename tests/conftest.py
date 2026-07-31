@@ -16,6 +16,7 @@ def fake_settings() -> Settings:
         max_page_size=4,
         max_batch_song_ids=4,
         max_statistics_tracks=10,
+        write_operations_enabled=True,
         cookie="MUSIC_U=test-cookie",
         user_id="99",
     )

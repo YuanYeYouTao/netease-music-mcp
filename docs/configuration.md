@@ -10,7 +10,7 @@ CLI 参数仅覆盖 transport、host、port 和 path。非法配置会使启动�
 | `NETEASE_MCP_PORT` | `8766` | 1–65535 |
 | `NETEASE_MCP_PATH` | `/mcp` | 必须以 `/` 开头 |
 | `NETEASE_BACKEND` | `netease-web` | `netease-web` / `fake` |
-| `NETEASE_WRITE_OPERATIONS_ENABLED` | `true` | 写操作总开关；设为 `false` 禁止创建歌单、改歌单曲目和点赞 |
+| `NETEASE_WRITE_OPERATIONS_ENABLED` | `false` | 写操作总开关；必须显式设为 `true` 才允许创建歌单、改歌单曲目和点赞 |
 | `NETEASE_COOKIE` | 空 | 完整 Cookie，敏感 |
 | `NETEASE_MUSIC_U` / `NETEASE_CSRF` | 空 | 可选拆分 Cookie，敏感 |
 | `NETEASE_USER_ID` | 空 | 当前登录用户字符串 ID |

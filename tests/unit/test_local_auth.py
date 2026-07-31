@@ -3,11 +3,14 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from netease_music_mcp.local_auth import (
     LocalAuthError,
     LocalAuthReader,
     LocalAuthSnapshot,
+    _decrypt_mac_aes_cbc,
     read_chromium_cookie_database,
     read_mmkv_cookie_store,
 )
@@ -210,3 +213,14 @@ def test_snapshot_repr_never_contains_cookie() -> None:
         cookie_names=("MUSIC_U",),
     )
     assert "do-not-print" not in repr(snapshot)
+
+
+def test_mac_chromium_v10_cookie_uses_aes_cbc() -> None:
+    key = b"0123456789abcdef"
+    plaintext = b"MUSIC_U=mac-user"
+    padder = padding.PKCS7(algorithms.AES.block_size).padder()
+    padded = padder.update(plaintext) + padder.finalize()
+    encryptor = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).encryptor()
+    encrypted = b"v10" + encryptor.update(padded) + encryptor.finalize()
+
+    assert _decrypt_mac_aes_cbc(encrypted, key) == plaintext.decode()

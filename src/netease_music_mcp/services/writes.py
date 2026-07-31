@@ -26,7 +26,7 @@ class WriteService:
     def _guard(self, confirm: bool, operation: str) -> None:
         if not self.settings.write_operations_enabled:
             raise UnsupportedOperationError("write operations are disabled")
-        self.authentication.require_user_id(None)
+        self.authentication.require_authenticated()
         if not confirm:
             raise InvalidRequestError("confirm must be true for account-changing operations")
         require_supported(self.backend, operation)

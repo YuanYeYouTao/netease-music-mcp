@@ -30,7 +30,10 @@ class MCPV2ServerAdapter:
         self.settings = settings
         self.mcp: MCPServer[object] = MCPServer(
             name="netease-music-mcp",
-            instructions="Read-only structured NetEase Cloud Music metadata.",
+            instructions=(
+                "Structured NetEase Cloud Music metadata with optional, "
+                "explicitly confirmed account writes."
+            ),
             version=__version__,
             log_level=settings.log_level,
         )

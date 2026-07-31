@@ -6,13 +6,15 @@
 
 - 开始 1.0.0：升级至 MCP Python SDK v2，保持 Domain、Service、Backend、15 个工具和 4 个 Resource 不变；补充 stdio/Streamable HTTP 现代与 legacy 客户端兼容测试。
 - 修复写操作成功后同进程读取歌单、用户库或喜欢状态命中旧缓存的问题；写入成功后清理共享缓存并支持立即回读。
+- 安全审查后将写操作改为默认关闭，禁止自动重试非幂等账号写入，并修复 macOS Chromium
+  `v10` Cookie 的 AES-CBC 解密兼容性。
 - 开始 0.5.0：补充 backend 能力声明，未支持的工具操作返回 `unsupported_operation`；保持 15 个工具、
   4 个 Resource、统一领域模型和本地 Cookie 认证不变。
 - Docker Compose 镜像版本更新为 0.5.0，Windows 与 macOS 通过 Docker Desktop 使用同一运行方式。
 - 增加宿主机本地认证导入命令；经确认后从 Windows/macOS 网易云桌面客户端读取 Cookie，
   仅注入当前 Docker 子进程，不持久化凭据。
 
-- 开始 0.4.0：增加默认启用、可通过 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭的创建歌单、增删曲目和点赞工具。
+- 开始 0.4.0：增加默认关闭、可通过 `NETEASE_WRITE_OPERATIONS_ENABLED=true` 启用的创建歌单、增删曲目和点赞工具。
 - 写调用必须显式传入 `confirm=true`；不提供删除歌单接口，便于可恢复的真实账号测试。
 - 修复创建歌单请求缺少 `os=pc` Cookie 且将 `privacy` 发送为字符串，导致上游返回 403 `illegal request`。
 - 修复点赞请求缺少 `os=pc` 与 `appver=2.9.7` Cookie，导致上游返回 `-460` 风控错误。

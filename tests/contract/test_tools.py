@@ -55,6 +55,7 @@ def fake_adapter():
         Settings(
             backend="fake",
             cache_backend="none",
+            write_operations_enabled=True,
             cookie="MUSIC_U=test",
             user_id="99",
         )

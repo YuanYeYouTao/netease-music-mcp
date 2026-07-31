@@ -426,6 +426,7 @@ class NeteaseWebBackend:
             "/api/playlist/create",
             {"name": name, "privacy": 10 if private else 0, "type": "NORMAL"},
             cookie_overrides={"os": "pc"},
+            retryable=False,
         )
         code = self._embedded_code(payload)
         playlist_id = self._extract_id(payload.get("playlist")) or self._extract_id(
@@ -450,6 +451,7 @@ class NeteaseWebBackend:
                 "trackIds": json.dumps(list(song_ids), separators=(",", ":")),
                 "imme": "true",
             },
+            retryable=False,
         )
         code = self._embedded_code(payload)
         return WriteResult(
@@ -465,6 +467,7 @@ class NeteaseWebBackend:
             "/api/radio/like",
             {"alg": "itembased", "trackId": song_id, "like": liked, "time": "3"},
             cookie_overrides={"os": "pc", "appver": "2.9.7"},
+            retryable=False,
         )
         code = self._embedded_code(payload)
         return WriteResult(action="set_song_like", code=code, song_ids=(song_id,), liked=liked)

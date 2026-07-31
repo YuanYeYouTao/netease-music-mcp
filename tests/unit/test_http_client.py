@@ -424,3 +424,40 @@ async def test_write_endpoints_use_expected_provider_routes(
     assert seen_cookies[2] is not None
     assert "os=pc" in seen_cookies[2]
     assert "appver=2.9.7" in seen_cookies[2]
+
+
+@pytest.mark.asyncio
+async def test_non_idempotent_write_requests_are_not_retried() -> None:
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        return httpx.Response(503, json={"code": 503}, request=request)
+
+    settings = Settings(
+        cookie="MUSIC_U=test; __csrf=csrf",
+        retry_attempts=2,
+        retry_initial_seconds=0,
+    )
+    authentication = AuthenticationProvider.from_settings(settings)
+    client = NeteaseHttpClient(
+        settings,
+        authentication,
+        transport=httpx.MockTransport(handler),
+    )
+    backend = NeteaseWebBackend(client, authentication)
+    try:
+        with pytest.raises(UpstreamUnavailableError):
+            await backend.create_playlist("Temporary", False)
+        with pytest.raises(UpstreamUnavailableError):
+            await backend.update_playlist_tracks("77", PlaylistTrackOperation.ADD, ("12", "13"))
+        with pytest.raises(UpstreamUnavailableError):
+            await backend.set_song_like("12", True)
+    finally:
+        await backend.close()
+
+    assert seen_paths == [
+        "/weapi/playlist/create",
+        "/api/playlist/manipulate/tracks",
+        "/weapi/radio/like",
+    ]
