@@ -1,14 +1,18 @@
 from netease_music_mcp.backends.base import MusicCatalogBackend
 from netease_music_mcp.cache.base import CacheBackend
 from netease_music_mcp.config import Settings
-from netease_music_mcp.domain.enums import DetailLevel, SearchCategory
+from netease_music_mcp.domain.enums import DetailLevel, ReleaseArea, SearchCategory
 from netease_music_mcp.domain.errors import InvalidRequestError
 from netease_music_mcp.domain.models import (
     AlbumDetail,
     ArtistDetail,
     GetSongsResult,
+    NewSongsPage,
     PlaylistDetail,
+    RankingPage,
+    RecommendationPage,
     SearchPage,
+    SimilarSongsPage,
 )
 
 from .common import ServiceBase
@@ -69,6 +73,51 @@ class CatalogService(ServiceBase):
             return GetSongsResult.model_validate_json(cached)
         result = await self.backend.get_songs(normalized, detail_level)
         await self.cache.set(key, result.model_dump_json(), self.settings.detail_cache_ttl_seconds)
+        return result
+
+    async def get_recommendations(
+        self, page: int = 1, page_size: int | None = None
+    ) -> RecommendationPage:
+        request = self.page_request(page, page_size)
+        # This endpoint can vary with the authenticated browser session, so do
+        # not persist its response in a public cache scope.
+        return await self.backend.get_recommendations(request)
+
+    async def get_similar_songs(
+        self, song_id: str, page: int = 1, page_size: int | None = None
+    ) -> SimilarSongsPage:
+        normalized_id = self.identifier(song_id, "song_id")
+        request = self.page_request(page, page_size)
+        key = self.cache_key(
+            "get_similar_songs",
+            {"page": request.page, "page_size": request.page_size, "song_id": normalized_id},
+        )
+        cached = await self.cache.get(key)
+        if cached is not None:
+            return SimilarSongsPage.model_validate_json(cached)
+        result = await self.backend.get_similar_songs(normalized_id, request)
+        await self.cache.set(key, result.model_dump_json(), self.settings.search_cache_ttl_seconds)
+        return result
+
+    async def get_new_songs(
+        self,
+        area: ReleaseArea = ReleaseArea.ALL,
+        page: int = 1,
+        page_size: int | None = None,
+    ) -> NewSongsPage:
+        request = self.page_request(page, page_size)
+        # This personalized endpoint can vary with the authenticated browser session.
+        result = await self.backend.get_new_songs(area, request)
+        return result
+
+    async def get_rankings(self, page: int = 1, page_size: int | None = None) -> RankingPage:
+        request = self.page_request(page, page_size)
+        key = self.cache_key("get_rankings", {"page": request.page, "page_size": request.page_size})
+        cached = await self.cache.get(key)
+        if cached is not None:
+            return RankingPage.model_validate_json(cached)
+        result = await self.backend.get_rankings(request)
+        await self.cache.set(key, result.model_dump_json(), self.settings.search_cache_ttl_seconds)
         return result
 
     async def get_album(

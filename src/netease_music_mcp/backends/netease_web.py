@@ -12,9 +12,14 @@ from netease_music_mcp.clients.responses import (
     ProviderArtist,
     ProviderArtistResponse,
     ProviderLibraryResponse,
+    ProviderLikeIdsResponse,
     ProviderLyricsResponse,
+    ProviderNewSongsResponse,
     ProviderPlaylistResponse,
+    ProviderRankingsResponse,
+    ProviderRecommendationResponse,
     ProviderSearchResponse,
+    ProviderSimilarSongsResponse,
     ProviderSong,
     ProviderSongsResponse,
 )
@@ -22,6 +27,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    ReleaseArea,
     SearchCategory,
 )
 from netease_music_mcp.domain.errors import (
@@ -36,9 +42,13 @@ from netease_music_mcp.domain.models import (
     GetSongsResult,
     LibraryItem,
     LyricsDocument,
+    NewSongsPage,
     PlaylistDetail,
+    RankingPage,
+    RecommendationPage,
     SearchItem,
     SearchPage,
+    SimilarSongsPage,
     SongDetail,
     SongSummary,
     UserLibraryPage,
@@ -141,6 +151,76 @@ class NeteaseWebBackend:
         )
         missing = tuple(song_id for song_id in song_ids if song_id not in by_id)
         return GetSongsResult(songs=songs, missing_ids=missing)
+
+    async def get_recommendations(self, page: PageRequest) -> RecommendationPage:
+        requested_end = page.offset + page.page_size
+        payload = await self._client.request_json(
+            "GET", "/api/personalized/playlist", params={"limit": requested_end + 1}
+        )
+        response = self._parse(ProviderRecommendationResponse, payload)
+        self._check_code(response.code)
+        selected = response.result[page.offset : requested_end]
+        total = len(response.result)
+        return RecommendationPage(
+            items=tuple(self._normalizer.recommendation_playlist(item) for item in selected),
+            page=PageInfo.from_request(page, total),
+        )
+
+    async def get_similar_songs(self, song_id: str, page: PageRequest) -> SimilarSongsPage:
+        payload = await self._client.request_json(
+            "GET",
+            "/api/v1/discovery/simiSong",
+            params={
+                "songid": song_id,
+                "limit": page.page_size + 1,
+                "offset": page.offset,
+            },
+        )
+        response = self._parse(ProviderSimilarSongsResponse, payload)
+        self._check_code(response.code)
+        has_more = len(response.songs) > page.page_size
+        selected = response.songs[: page.page_size]
+        total = page.offset + len(selected) + int(has_more)
+        return SimilarSongsPage(
+            song_id=song_id,
+            items=tuple(self._normalizer.song(item) for item in selected),
+            page=PageInfo(
+                page=page.page,
+                page_size=page.page_size,
+                total=total,
+                has_more=has_more,
+            ),
+        )
+
+    async def get_new_songs(self, area: ReleaseArea, page: PageRequest) -> NewSongsPage:
+        payload = await self._client.request_json(
+            "GET",
+            "/api/personalized/newsong",
+            params={
+                "areaId": {"all": 0, "zh": 7, "ea": 96, "kr": 16, "jp": 8}[area.value],
+                "limit": page.offset + page.page_size + 1,
+            },
+        )
+        response = self._parse(ProviderNewSongsResponse, payload)
+        self._check_code(response.code)
+        songs = [item.song for item in response.result if item.song is not None]
+        selected = songs[page.offset : page.offset + page.page_size]
+        total = len(songs)
+        return NewSongsPage(
+            area=area,
+            items=tuple(self._normalizer.song(item) for item in selected),
+            page=PageInfo.from_request(page, total),
+        )
+
+    async def get_rankings(self, page: PageRequest) -> RankingPage:
+        payload = await self._client.request_json("GET", "/api/toplist/detail")
+        response = self._parse(ProviderRankingsResponse, payload)
+        self._check_code(response.code)
+        selected = response.rankings[page.offset : page.offset + page.page_size]
+        return RankingPage(
+            items=tuple(self._normalizer.ranking(item) for item in selected),
+            page=PageInfo.from_request(page, len(response.rankings)),
+        )
 
     async def get_album(
         self, album_id: str, include_tracks: bool, track_page: PageRequest
@@ -299,6 +379,19 @@ class NeteaseWebBackend:
             selected = song_items[page.offset : page.offset + page.page_size]
             items = tuple(self._normalizer.song(item) for item in selected)
             total = len(song_items)
+        elif section is LibrarySection.LIKED_SONGS:
+            payload = await self._client.request_json(
+                "GET", "/api/song/like/get", params={"uid": user_id}
+            )
+            like_response = self._parse(ProviderLikeIdsResponse, payload)
+            self._check_code(like_response.code)
+            song_ids = tuple(str(song_id) for song_id in like_response.ids)
+            selected_ids = song_ids[page.offset : page.offset + page.page_size]
+            if selected_ids:
+                items = (await self.get_songs(selected_ids, DetailLevel.SUMMARY)).songs
+            else:
+                items = ()
+            total = len(song_ids)
         else:
             scope_key = "weekData" if history_scope is HistoryScope.WEEK else "allData"
             payload = await self._client.request_json(
@@ -338,7 +431,7 @@ class NeteaseWebBackend:
 
     @classmethod
     def _parse_list(cls, model: type[ProviderT], payload: object) -> list[ProviderT]:
-        if not isinstance(payload, Sequence) or isinstance(payload, (str, bytes)):
+        if not isinstance(payload, Sequence) or isinstance(payload, str | bytes):
             raise UpstreamResponseError("NetEase returned an invalid list response")
         return [cls._parse(model, item) for item in payload]
 

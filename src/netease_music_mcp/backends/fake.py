@@ -4,6 +4,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    ReleaseArea,
     SearchCategory,
 )
 from netease_music_mcp.domain.errors import ResourceNotFoundError
@@ -16,9 +17,15 @@ from netease_music_mcp.domain.models import (
     LibraryItem,
     LyricsDocument,
     LyricsLine,
+    NewSongsPage,
     PlaylistDetail,
     PlaylistSummary,
+    RankingPage,
+    RankingSummary,
+    RankingTrack,
+    RecommendationPage,
     SearchPage,
+    SimilarSongsPage,
     SongDetail,
     SongSummary,
     UserLibraryPage,
@@ -83,6 +90,15 @@ class FakeMusicCatalogBackend:
             tags=("test",),
             canonical_url="https://music.163.com/#/playlist?id=30",
         )
+        self.ranking = RankingSummary(
+            id="30",
+            name="Example Ranking",
+            update_frequency="每天更新",
+            cover_url="https://example.invalid/ranking.jpg",
+            track_count=3,
+            top_tracks=(RankingTrack(id="1", title="Example Song 1", artist="Example Artist"),),
+            canonical_url="https://music.163.com/#/playlist?id=30",
+        )
         self.closed = False
 
     async def search(
@@ -132,6 +148,45 @@ class FakeMusicCatalogBackend:
             else:
                 songs.append(SongSummary(**song.model_dump(include=set(SongSummary.model_fields))))
         return GetSongsResult(songs=tuple(songs), missing_ids=tuple(missing))
+
+    async def get_recommendations(self, page: PageRequest) -> RecommendationPage:
+        values = (self.playlist_summary,)
+        return RecommendationPage(
+            items=values[page.offset : page.offset + page.page_size],
+            page=PageInfo.from_request(page, len(values)),
+        )
+
+    async def get_similar_songs(self, song_id: str, page: PageRequest) -> SimilarSongsPage:
+        if song_id not in self.songs:
+            raise ResourceNotFoundError(f"song {song_id} was not found")
+        values = tuple(
+            SongSummary(**song.model_dump(include=set(SongSummary.model_fields)))
+            for key, song in self.songs.items()
+            if key != song_id
+        )
+        return SimilarSongsPage(
+            song_id=song_id,
+            items=values[page.offset : page.offset + page.page_size],
+            page=PageInfo.from_request(page, len(values)),
+        )
+
+    async def get_new_songs(self, area: ReleaseArea, page: PageRequest) -> NewSongsPage:
+        songs = tuple(
+            SongSummary(**song.model_dump(include=set(SongSummary.model_fields)))
+            for song in self.songs.values()
+        )
+        return NewSongsPage(
+            area=area,
+            items=songs[page.offset : page.offset + page.page_size],
+            page=PageInfo.from_request(page, len(songs)),
+        )
+
+    async def get_rankings(self, page: PageRequest) -> RankingPage:
+        values = (self.ranking,)
+        return RankingPage(
+            items=values[page.offset : page.offset + page.page_size],
+            page=PageInfo.from_request(page, len(values)),
+        )
 
     async def get_album(
         self, album_id: str, include_tracks: bool, track_page: PageRequest
@@ -233,6 +288,11 @@ class FakeMusicCatalogBackend:
             )
         elif section is LibrarySection.ALBUM_SUBSCRIPTIONS:
             values = (self.album_summary,)
+        elif section is LibrarySection.LIKED_SONGS:
+            values = tuple(
+                SongSummary(**song.model_dump(include=set(SongSummary.model_fields)))
+                for song in self.songs.values()
+            )
         else:
             values = tuple(
                 SongSummary(**song.model_dump(include=set(SongSummary.model_fields)))

@@ -1,7 +1,7 @@
 services:
   netease-music-mcp:
     build: .
-    image: netease-music-mcp:0.1.0
+    image: netease-music-mcp:0.3.0
     init: true
     read_only: true
     env_file:

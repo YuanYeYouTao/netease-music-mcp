@@ -90,6 +90,22 @@ async def test_private_library_uses_authenticated_configured_user(
     assert result.items
 
 
+@pytest.mark.asyncio
+async def test_discovery_pages_and_liked_songs_use_domain_models(
+    application: MusicApplication,
+) -> None:
+    recommendations = await application.get_recommendations(page_size=1)
+    similar = await application.get_similar_songs("1", page_size=1)
+    releases = await application.get_new_songs(page_size=1)
+    rankings = await application.get_rankings(page_size=1)
+    liked = await application.get_user_library(LibrarySection.LIKED_SONGS, page_size=1)
+    assert recommendations.items[0].id == "30"
+    assert similar.song_id == "1"
+    assert releases.items[0].id == "1"
+    assert rankings.items[0].id == "30"
+    assert liked.items[0].id == "1"
+
+
 class CountingFakeBackend(FakeMusicCatalogBackend):
     def __init__(self) -> None:
         super().__init__()

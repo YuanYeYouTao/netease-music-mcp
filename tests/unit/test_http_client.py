@@ -9,6 +9,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    ReleaseArea,
     SearchCategory,
 )
 from netease_music_mcp.domain.errors import (
@@ -211,3 +212,122 @@ async def test_playlist_library_normalizes_nulls_and_paginates_locally() -> None
     assert result.page.has_more is True
     assert seen[0].url.params["offset"] == "0"
     assert seen[0].url.params["limit"] == "4"
+
+
+@pytest.mark.asyncio
+async def test_discovery_and_liked_library_endpoints_are_normalized() -> None:
+    seen_paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen_paths.append(request.url.path)
+        if request.url.path == "/api/personalized/playlist":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "result": [
+                        {"id": 30, "name": "Recommendation", "picUrl": "https://example.test/p.jpg"}
+                    ],
+                },
+                request=request,
+            )
+        if request.url.path == "/api/v1/discovery/simiSong":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "songs": [
+                        {"id": 2, "name": "Similar", "artists": [{"id": 10, "name": "Artist"}]}
+                    ],
+                },
+                request=request,
+            )
+        if request.url.path == "/api/personalized/newsong":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "result": [
+                        {
+                            "song": {
+                                "id": 20,
+                                "name": "New Song",
+                                "artists": [{"id": 10, "name": "Artist"}],
+                            }
+                        }
+                    ],
+                },
+                request=request,
+            )
+        if request.url.path == "/api/toplist/detail":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "list": [
+                        {
+                            "id": 30,
+                            "name": "Ranking",
+                            "updateFrequency": "daily",
+                            "trackCount": 1,
+                            "tracks": [
+                                {
+                                    "first": {"id": 2, "name": "Similar"},
+                                    "second": {"id": 10, "name": "Artist"},
+                                }
+                            ],
+                        }
+                    ],
+                },
+                request=request,
+            )
+        if request.url.path == "/api/song/like/get":
+            return httpx.Response(200, json={"code": 200, "ids": [1]}, request=request)
+        if request.url.path == "/api/song/detail/":
+            return httpx.Response(
+                200,
+                json={
+                    "code": 200,
+                    "songs": [
+                        {"id": 1, "name": "Liked", "artists": [{"id": 10, "name": "Artist"}]}
+                    ],
+                },
+                request=request,
+            )
+        raise AssertionError(request.url.path)
+
+    settings = Settings(cookie="MUSIC_U=test")
+    authentication = AuthenticationProvider.from_settings(settings)
+    client = NeteaseHttpClient(
+        settings,
+        authentication,
+        transport=httpx.MockTransport(handler),
+    )
+    backend = NeteaseWebBackend(client, authentication)
+    try:
+        recommendation = await backend.get_recommendations(PageRequest(page=1, page_size=1))
+        similar = await backend.get_similar_songs("1", PageRequest(page=1, page_size=1))
+        releases = await backend.get_new_songs(ReleaseArea.ALL, PageRequest(page=1, page_size=1))
+        rankings = await backend.get_rankings(PageRequest(page=1, page_size=1))
+        liked = await backend.get_user_library(
+            LibrarySection.LIKED_SONGS,
+            "99",
+            PageRequest(page=1, page_size=1),
+            HistoryScope.WEEK,
+        )
+    finally:
+        await backend.close()
+
+    assert recommendation.items[0].id == "30"
+    assert similar.items[0].id == "2"
+    assert releases.items[0].id == "20"
+    assert rankings.items[0].top_tracks[0].artist == "Artist"
+    assert liked.items[0].id == "1"
+    assert seen_paths == [
+        "/api/personalized/playlist",
+        "/api/v1/discovery/simiSong",
+        "/api/personalized/newsong",
+        "/api/toplist/detail",
+        "/api/song/like/get",
+        "/api/song/detail/",
+    ]

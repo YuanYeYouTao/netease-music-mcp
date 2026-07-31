@@ -4,6 +4,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    ReleaseArea,
     SearchCategory,
 )
 from netease_music_mcp.domain.models import (
@@ -11,8 +12,12 @@ from netease_music_mcp.domain.models import (
     ArtistDetail,
     GetSongsResult,
     LyricsDocument,
+    NewSongsPage,
     PlaylistDetail,
+    RankingPage,
+    RecommendationPage,
     SearchPage,
+    SimilarSongsPage,
     UserLibraryPage,
 )
 from netease_music_mcp.domain.pagination import PageRequest
@@ -32,6 +37,14 @@ class MusicCatalogBackend(Protocol):
     async def get_songs(
         self, song_ids: tuple[str, ...], detail_level: DetailLevel
     ) -> GetSongsResult: ...
+
+    async def get_recommendations(self, page: PageRequest) -> RecommendationPage: ...
+
+    async def get_similar_songs(self, song_id: str, page: PageRequest) -> SimilarSongsPage: ...
+
+    async def get_new_songs(self, area: ReleaseArea, page: PageRequest) -> NewSongsPage: ...
+
+    async def get_rankings(self, page: PageRequest) -> RankingPage: ...
 
     async def get_album(
         self, album_id: str, include_tracks: bool, track_page: PageRequest

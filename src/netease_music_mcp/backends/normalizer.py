@@ -5,6 +5,8 @@ from netease_music_mcp.clients.responses import (
     ProviderAlbum,
     ProviderArtist,
     ProviderPlaylist,
+    ProviderRanking,
+    ProviderRecommendationPlaylist,
     ProviderSong,
 )
 from netease_music_mcp.domain.identifiers import normalize_id
@@ -13,6 +15,8 @@ from netease_music_mcp.domain.models import (
     ArtistSummary,
     LyricsLine,
     PlaylistSummary,
+    RankingSummary,
+    RankingTrack,
     SongDetail,
     SongSummary,
 )
@@ -94,6 +98,49 @@ class NeteaseNormalizer:
             subscribed_count=max(value.subscribed_count, 0),
             tags=tuple(value.tags),
             canonical_url=f"https://music.163.com/#/playlist?id={playlist_id}",
+        )
+
+    @staticmethod
+    def recommendation_playlist(value: ProviderRecommendationPlaylist) -> PlaylistSummary:
+        playlist_id = normalize_id(value.id)
+        return PlaylistSummary(
+            id=playlist_id,
+            name=value.name,
+            cover_url=value.pic_url or None,
+            track_count=max(value.track_count or 0, 0),
+            play_count=max(int(value.play_count or 0), 0),
+            canonical_url=f"https://music.163.com/#/playlist?id={playlist_id}",
+        )
+
+    @staticmethod
+    def ranking(value: ProviderRanking) -> RankingSummary:
+        ranking_id = normalize_id(value.id)
+        top_tracks: list[RankingTrack] = []
+        for track in value.tracks:
+            if track.first is None:
+                continue
+            first_id = track.first.id if not isinstance(track.first, str) else None
+            first_title = track.first.name if not isinstance(track.first, str) else track.first
+            second_artist = (
+                track.second.name
+                if track.second is not None and not isinstance(track.second, str)
+                else track.second
+            )
+            top_tracks.append(
+                RankingTrack(
+                    id=normalize_id(first_id) if first_id is not None else None,
+                    title=first_title,
+                    artist=second_artist,
+                )
+            )
+        return RankingSummary(
+            id=ranking_id,
+            name=value.name,
+            update_frequency=value.update_frequency,
+            cover_url=value.cover_img_url or None,
+            track_count=max(value.track_count, 0),
+            top_tracks=tuple(top_tracks),
+            canonical_url=f"https://music.163.com/#/playlist?id={ranking_id}",
         )
 
     def lyrics(

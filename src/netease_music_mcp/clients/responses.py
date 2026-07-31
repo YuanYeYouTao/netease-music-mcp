@@ -99,6 +99,62 @@ class ProviderSearchResponse(ProviderModel):
     result: ProviderSearchResult = Field(default_factory=ProviderSearchResult)
 
 
+class ProviderRecommendationPlaylist(ProviderModel):
+    id: str | int
+    name: str = ""
+    pic_url: str | None = Field(default=None, alias="picUrl")
+    play_count: int | float | None = Field(default=0, alias="playCount")
+    track_count: int | None = Field(default=0, alias="trackCount")
+
+
+class ProviderRecommendationResponse(ProviderModel):
+    code: int = 200
+    result: list[ProviderRecommendationPlaylist] = Field(default_factory=list)
+
+
+class ProviderSimilarSongsResponse(ProviderModel):
+    code: int = 200
+    songs: list[ProviderSong] = Field(default_factory=list)
+
+
+class ProviderNewSong(ProviderModel):
+    song: ProviderSong | None = None
+
+
+class ProviderNewSongsResponse(ProviderModel):
+    code: int = 200
+    result: list[ProviderNewSong] = Field(default_factory=list)
+
+
+class ProviderRankingTrackPart(ProviderModel):
+    id: str | int | None = None
+    name: str = ""
+
+
+class ProviderRankingTrack(ProviderModel):
+    first: ProviderRankingTrackPart | str | None = None
+    second: ProviderRankingTrackPart | str | None = None
+
+
+class ProviderRanking(ProviderModel):
+    id: str | int
+    name: str = ""
+    cover_img_url: str | None = Field(default=None, alias="coverImgUrl")
+    update_frequency: str | None = Field(default=None, alias="updateFrequency")
+    track_count: int = Field(default=0, alias="trackCount")
+    tracks: list[ProviderRankingTrack] = Field(default_factory=list)
+
+
+class ProviderRankingsResponse(ProviderModel):
+    code: int = 200
+    rankings: list[ProviderRanking] = Field(default_factory=list, alias="list")
+
+
+class ProviderLikeIdsResponse(ProviderModel):
+    code: int = 200
+    ids: list[str | int] = Field(default_factory=list)
+
+
 class ProviderSongsResponse(ProviderModel):
     code: int = 200
     songs: list[ProviderSong] = Field(default_factory=list)

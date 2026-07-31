@@ -93,7 +93,7 @@ class Settings(BaseSettings):
             "max_batch_song_ids": self.max_batch_song_ids,
             # Bump when response semantics change so persisted entries created
             # by an older request profile cannot poison new search results.
-            "schema": "0.1.1-browser-profile",
+            "schema": "0.3.0-discovery",
         }
         encoded = json.dumps(values, sort_keys=True, separators=(",", ":"), default=str)
         return hashlib.sha256(encoded.encode()).hexdigest()

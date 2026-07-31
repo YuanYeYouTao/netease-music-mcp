@@ -6,6 +6,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    ReleaseArea,
     SearchCategory,
 )
 from netease_music_mcp.domain.models import (
@@ -13,9 +14,13 @@ from netease_music_mcp.domain.models import (
     ArtistDetail,
     GetSongsResult,
     LyricsDocument,
+    NewSongsPage,
     PlaylistDetail,
     PlaylistStatistics,
+    RankingPage,
+    RecommendationPage,
     SearchPage,
+    SimilarSongsPage,
     UserLibraryPage,
 )
 from netease_music_mcp.services import (
@@ -56,6 +61,27 @@ class MusicApplication:
         self, song_ids: tuple[str, ...], detail_level: DetailLevel = DetailLevel.SUMMARY
     ) -> GetSongsResult:
         return await self.catalog.get_songs(song_ids, detail_level)
+
+    async def get_recommendations(
+        self, page: int = 1, page_size: int | None = None
+    ) -> RecommendationPage:
+        return await self.catalog.get_recommendations(page, page_size)
+
+    async def get_similar_songs(
+        self, song_id: str, page: int = 1, page_size: int | None = None
+    ) -> SimilarSongsPage:
+        return await self.catalog.get_similar_songs(song_id, page, page_size)
+
+    async def get_new_songs(
+        self,
+        area: ReleaseArea = ReleaseArea.ALL,
+        page: int = 1,
+        page_size: int | None = None,
+    ) -> NewSongsPage:
+        return await self.catalog.get_new_songs(area, page, page_size)
+
+    async def get_rankings(self, page: int = 1, page_size: int | None = None) -> RankingPage:
+        return await self.catalog.get_rankings(page, page_size)
 
     async def get_album(
         self,

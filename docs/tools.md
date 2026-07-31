@@ -7,6 +7,10 @@
 | --- | --- | --- |
 | `music_search` | `query`, `category`, `page=1`, `page_size=None`, `detail_level=summary` | `SearchPage` |
 | `get_songs` | `song_ids`, `detail_level=summary` | `GetSongsResult {songs, missing_ids}` |
+| `get_recommendations` | `page=1`, `page_size=None` | `RecommendationPage` |
+| `get_similar_songs` | `song_id`, `page=1`, `page_size=None` | `SimilarSongsPage` |
+| `get_new_songs` | `area=all`, `page=1`, `page_size=None` | `NewSongsPage` |
+| `get_rankings` | `page=1`, `page_size=None` | `RankingPage` |
 | `get_album` | `album_id`, `include_tracks=false`, `track_page=1`, `track_page_size=None` | `AlbumDetail` |
 | `get_artist` | `artist_id`, `include_top_songs=false`, `top_song_count=None` | `ArtistDetail` |
 | `get_playlist` | `playlist_id`, `include_tracks=false`, `track_page=1`, `track_page_size=None` | `PlaylistDetail` |
@@ -16,8 +20,10 @@
 
 `category`：`song`、`artist`、`album`、`playlist`。
 
+`area`：`all`、`zh`、`ea`、`kr`、`jp`。
+
 `section`：`playlists`、`artist_subscriptions`、`album_subscriptions`、
-`daily_recommendations`、`play_history`。
+`daily_recommendations`、`play_history`、`liked_songs`。
 
 错误在统一 MCP 边界表示为 `error_code`、`message`、`retryable`。未找到与上游故障不同；
 私人数据无登录态明确返回 `authentication_required`。

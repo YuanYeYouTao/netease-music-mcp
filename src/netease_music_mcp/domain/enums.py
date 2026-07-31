@@ -8,6 +8,14 @@ class SearchCategory(StrEnum):
     PLAYLIST = "playlist"
 
 
+class ReleaseArea(StrEnum):
+    ALL = "all"
+    CHINESE = "zh"
+    EUROPEAN_AMERICAN = "ea"
+    KOREAN = "kr"
+    JAPANESE = "jp"
+
+
 class DetailLevel(StrEnum):
     SUMMARY = "summary"
     FULL = "full"
@@ -19,6 +27,7 @@ class LibrarySection(StrEnum):
     ALBUM_SUBSCRIPTIONS = "album_subscriptions"
     DAILY_RECOMMENDATIONS = "daily_recommendations"
     PLAY_HISTORY = "play_history"
+    LIKED_SONGS = "liked_songs"
 
 
 class HistoryScope(StrEnum):

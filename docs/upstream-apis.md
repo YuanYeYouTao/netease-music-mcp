@@ -5,7 +5,7 @@
 
 | 操作 | 当前路径 | 稳定性 |
 | --- | --- | --- |
-| 搜索 | `POST /api/search/get` | 非公开；type/结果容器可能变化 |
+| 搜索 | `POST /api/cloudsearch/pc` | 非公开；type/结果容器可能变化 |
 | 歌曲详情 | `POST /api/song/detail/` | 非公开；`ar/al` 与 `artists/album` 均规范化 |
 | 专辑 | `GET /api/album/{id}` | 非公开；曲目在 Backend 本地分页 |
 | 歌手 | `GET /api/artist/{id}` | 非公开；热门歌曲数量可能由上游限制 |
@@ -15,6 +15,11 @@
 | 收藏歌手/专辑 | `GET /api/artist/sublist`, `/api/album/sublist` | 需要有效认证 |
 | 每日推荐 | `GET /api/v3/discovery/recommend/songs` | 需要有效认证 |
 | 播放记录 | `GET /api/v1/play/record` | 需要有效认证；type 0/1 |
+| 推荐歌单 | `GET /api/personalized/playlist` | 非公开；响应随登录态变化，不持久化缓存 |
+| 相似歌曲 | `GET /api/v1/discovery/simiSong` | 非公开；以额外一条结果探测是否还有下一页 |
+| 推荐新歌 | `GET /api/personalized/newsong` | 非公开；areaId 为 0/7/96/16/8；不持久化缓存 |
+| 排行榜 | `GET /api/toplist/detail` | 非公开；榜单只返回上游摘要曲目 |
+| 喜欢的歌曲 ID | `GET /api/song/like/get` | 需要有效认证；随后批量读取歌曲详情 |
 | 登录检查 | `GET /api/nuser/account/get` | 仅 CLI doctor；不是 MCP Tool |
 
 上游 JSON 先经 Provider Pydantic Model 验证，再由 `NeteaseNormalizer` 处理 ID、字段别名、

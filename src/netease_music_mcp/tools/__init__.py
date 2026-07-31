@@ -4,11 +4,12 @@ from mcp.server.fastmcp import FastMCP
 
 from netease_music_mcp.application import MusicApplication
 
-from . import catalog, library, lyrics, resources, search, statistics
+from . import catalog, discovery, library, lyrics, resources, search, statistics
 
 
 def register_all_tools(server: FastMCP[object], application: MusicApplication) -> None:
     search.register(server, application)
+    discovery.register(server, application)
     catalog.register(server, application)
     lyrics.register(server, application)
     library.register(server, application)
