@@ -4,14 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "netease-music-mcp"
-version = "0.3.0"
-description = "Read-only NetEase Cloud Music data server for MCP clients"
+version = "0.4.0"
+description = "NetEase Cloud Music data and optional write server for MCP clients"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "netease-music-mcp contributors" }]
 dependencies = [
   "aiosqlite>=0.21,<1",
+  "cryptography>=43,<50",
   "httpx>=0.28,<1",
   "mcp[cli]>=1.28.1,<2",
   "pydantic>=2.11,<3",

@@ -36,7 +36,7 @@ async def test_streamable_http_initialize_list_and_call() -> None:
                                 {"playlist_id": "30", "include_tracks": False},
                             )
                             assert initialized.serverInfo.name == "netease-music-mcp"
-                            assert len(tools.tools) == 12
+                            assert len(tools.tools) == 15
                             assert len(resource_templates.resourceTemplates) == 4
                             assert (
                                 json.loads(playlist.contents[0].text)["playlist"]["id"] == "30"  # type: ignore[union-attr]

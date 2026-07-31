@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 开始 0.4.0：增加默认启用、可通过 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭的创建歌单、增删曲目和点赞工具。
+- 写调用必须显式传入 `confirm=true`；不提供删除歌单接口，便于可恢复的真实账号测试。
+- 修复创建歌单请求缺少 `os=pc` Cookie 且将 `privacy` 发送为字符串，导致上游返回 403 `illegal request`。
+- 修复点赞请求缺少 `os=pc` 与 `appver=2.9.7` Cookie，导致上游返回 `-460` 风控错误。
 - 开始 0.3.0：增加只读推荐、相似歌曲、新歌速递和排行榜工具，并支持分页读取喜欢的歌曲。
 - 增加 song、album、artist 和 playlist 四类只读 MCP Resource URI 模板。
 - 兼容私人歌单中的空描述/空曲目字段，并在上游忽略 limit 时保持本地分页边界。

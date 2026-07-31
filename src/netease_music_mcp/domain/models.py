@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
-from .enums import LibrarySection, ReleaseArea, SearchCategory
+from .enums import LibrarySection, PlaylistTrackOperation, ReleaseArea, SearchCategory
 from .pagination import PageInfo
 
 
@@ -194,3 +194,12 @@ class PlaylistStatistics(DomainModel):
     album_counts: tuple[CountEntry, ...]
     release_year_distribution: tuple[YearCount, ...]
     unavailable_track_count: int = Field(ge=0)
+
+
+class WriteResult(DomainModel):
+    action: str
+    code: int = Field(ge=0)
+    playlist_id: str | None = None
+    song_ids: tuple[str, ...] = ()
+    operation: PlaylistTrackOperation | None = None
+    liked: bool | None = None

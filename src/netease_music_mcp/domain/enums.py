@@ -40,3 +40,8 @@ class AuthenticationState(StrEnum):
     AUTHENTICATED = "authenticated"
     EXPIRED = "expired"
     INVALID = "invalid"
+
+
+class PlaylistTrackOperation(StrEnum):
+    ADD = "add"
+    REMOVE = "del"

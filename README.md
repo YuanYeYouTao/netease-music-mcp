@@ -1,14 +1,15 @@
 # netease-music-mcp
 
-`netease-music-mcp` 是面向通用 MCP Client 的只读网易云音乐数据服务器。它以紧凑、分页、
+`netease-music-mcp` 是面向通用 MCP Client 的网易云音乐数据服务器。它以紧凑、分页、
 结构化的方式提供歌曲、歌手、专辑、歌单、歌词和登录用户音乐库数据，可供 Claude Desktop、
 Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
-当前开发版本：`0.3.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
+当前开发版本：`0.4.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
-地区或 DRM 限制。0.3.0 中没有写操作、Prompts、Sampling 或 Elicitation。
+地区或 DRM 限制。写操作默认启用，可用 `NETEASE_WRITE_OPERATIONS_ENABLED=false` 关闭；每次
+写调用仍必须显式传入 `confirm=true`，且不提供删除歌单接口。
 
 ## 安装
 
@@ -52,7 +53,7 @@ uv run netease-music-mcp cache clear
 `config` 仅显示非敏感值、配置来源和 Cookie 是否已配置，不会显示 Cookie 内容。
 `doctor` 检查配置、缓存可写性、公开查询和（已配置时）登录状态。
 
-## 十二个工具
+## 十五个工具
 
 | Tool | 用途 | 返回模型 |
 | --- | --- | --- |
@@ -68,6 +69,9 @@ uv run netease-music-mcp cache clear
 | `get_lyrics` | 分页读取原文、翻译和罗马音歌词 | `LyricsDocument` |
 | `get_user_library` | 读取已登录用户的音乐库分区 | `UserLibraryPage` |
 | `get_playlist_statistics` | 计算确定性的歌单统计 | `PlaylistStatistics` |
+| `create_playlist` | 创建歌单（需确认） | `WriteResult` |
+| `update_playlist_tracks` | 增删歌单曲目（需确认） | `WriteResult` |
+| `set_song_like` | 点赞或取消点赞（需确认） | `WriteResult` |
 
 搜索结果只保留概要；歌曲详情使用批量工具读取。专辑和歌单默认不包含曲目，歌词默认只返回
 一页。MCP 响应使用 `structuredContent`，兼容文本内容仅为一句短摘要。
@@ -96,6 +100,9 @@ uv run netease-music-mcp cache clear
 可直接配置完整 `NETEASE_COOKIE`，或使用 `NETEASE_MUSIC_U` 与 `NETEASE_CSRF` 由认证组件
 统一组装。Cookie 不进入日志、异常、MCP 输出或缓存。详见
 [docs/authentication.md](docs/authentication.md)。
+
+写工具仅对已认证账号开放。真实测试建议先读取歌单和喜欢状态，选择原本未存在的歌曲执行
+“添加后删除”或“点赞后取消点赞”，并在每一步核对恢复结果。
 
 ## Yuki 接入
 
@@ -149,7 +156,7 @@ HTTP 示例：
 ## Docker
 
 ```bash
-docker build -t netease-music-mcp:0.3.0 .
+docker build -t netease-music-mcp:0.4.0 .
 docker compose up --build
 ```
 
@@ -170,7 +177,7 @@ Compose 从本地 `.env` 读取配置，将 SQLite 缓存放入具名卷，并�
 
 ## 数据与版权
 
-服务器只读取并规范化元数据和歌词。数据、封面与歌词的权利属于各自权利人；使用者应遵守
+服务器读取并规范化元数据和歌词，也可按显式确认执行歌单和点赞写操作。数据、封面与歌词的权利属于各自权利人；使用者应遵守
 网易云音乐服务条款、适用法律及地区限制。本项目不缓存认证响应、Header 或原始上游 JSON。
 
 更多信息：

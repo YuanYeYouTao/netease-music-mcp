@@ -27,6 +27,7 @@ from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    PlaylistTrackOperation,
     ReleaseArea,
     SearchCategory,
 )
@@ -36,6 +37,7 @@ from netease_music_mcp.domain.errors import (
     ResourceNotFoundError,
     UpstreamResponseError,
 )
+from netease_music_mcp.domain.identifiers import normalize_id
 from netease_music_mcp.domain.models import (
     AlbumDetail,
     ArtistDetail,
@@ -52,6 +54,7 @@ from netease_music_mcp.domain.models import (
     SongDetail,
     SongSummary,
     UserLibraryPage,
+    WriteResult,
 )
 from netease_music_mcp.domain.pagination import PageInfo, PageRequest
 
@@ -61,7 +64,7 @@ ProviderT = TypeVar("ProviderT", bound=BaseModel)
 
 
 class NeteaseWebBackend:
-    """Read-only adapter for NetEase's web endpoints.
+    """Adapter for NetEase's web endpoints.
 
     These endpoints are not a public compatibility contract and can change without notice.
     """
@@ -416,6 +419,54 @@ class NeteaseWebBackend:
             has_more=info.has_more,
         )
 
+    async def create_playlist(self, name: str, private: bool) -> WriteResult:
+        payload = await self._client.request_weapi_json(
+            "/api/playlist/create",
+            {"name": name, "privacy": 10 if private else 0, "type": "NORMAL"},
+            cookie_overrides={"os": "pc"},
+        )
+        code = self._embedded_code(payload)
+        playlist_id = self._extract_id(payload.get("playlist")) or self._extract_id(
+            payload.get("id")
+        )
+        if playlist_id is None:
+            raise UpstreamResponseError("NetEase did not return the created playlist ID")
+        return WriteResult(action="create_playlist", code=code, playlist_id=playlist_id)
+
+    async def update_playlist_tracks(
+        self,
+        playlist_id: str,
+        operation: PlaylistTrackOperation,
+        song_ids: tuple[str, ...],
+    ) -> WriteResult:
+        payload = await self._client.request_json(
+            "POST",
+            "/api/playlist/manipulate/tracks",
+            data={
+                "op": operation.value,
+                "pid": playlist_id,
+                "trackIds": json.dumps(list(song_ids), separators=(",", ":")),
+                "imme": "true",
+            },
+        )
+        code = self._embedded_code(payload)
+        return WriteResult(
+            action="update_playlist_tracks",
+            code=code,
+            playlist_id=playlist_id,
+            song_ids=song_ids,
+            operation=operation,
+        )
+
+    async def set_song_like(self, song_id: str, liked: bool) -> WriteResult:
+        payload = await self._client.request_weapi_json(
+            "/api/radio/like",
+            {"alg": "itembased", "trackId": song_id, "like": liked, "time": "3"},
+            cookie_overrides={"os": "pc", "appver": "2.9.7"},
+        )
+        code = self._embedded_code(payload)
+        return WriteResult(action="set_song_like", code=code, song_ids=(song_id,), liked=liked)
+
     def _library_response(self, payload: JsonObject) -> ProviderLibraryResponse:
         self._check_embedded_code(payload)
         return self._parse(ProviderLibraryResponse, payload)
@@ -437,10 +488,37 @@ class NeteaseWebBackend:
 
     @classmethod
     def _check_embedded_code(cls, payload: JsonObject) -> None:
+        cls._embedded_code(payload)
+
+    @classmethod
+    def _embedded_code(cls, payload: JsonObject) -> int:
         value = payload.get("code", 200)
         if not isinstance(value, int):
             raise UpstreamResponseError("NetEase returned an invalid response code")
-        cls._check_code(value)
+        try:
+            cls._check_code(value)
+        except UpstreamResponseError as exc:
+            detail = payload.get("msg") or payload.get("message")
+            if isinstance(detail, str) and detail.strip():
+                raise UpstreamResponseError(
+                    f"NetEase returned provider code {value}: {detail.strip()}"
+                ) from exc
+            raise
+        return value
+
+    @staticmethod
+    def _extract_id(value: object) -> str | None:
+        candidate: object = value
+        if isinstance(value, dict):
+            candidate = value.get("id")
+        if candidate is None:
+            return None
+        if not isinstance(candidate, str | int):
+            raise UpstreamResponseError("NetEase returned an invalid resource ID")
+        try:
+            return normalize_id(candidate)
+        except ValueError as exc:
+            raise UpstreamResponseError("NetEase returned an invalid resource ID") from exc
 
     @staticmethod
     def _check_code(code: int) -> None:

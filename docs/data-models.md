@@ -16,5 +16,6 @@
 - `RecommendationPage`、`SimilarSongsPage`、`NewSongsPage`、`RankingPage`：发现内容统一分页；
   排行榜只保留榜单元数据和上游提供的紧凑 Top 曲目。
 - `PlaylistStatistics`：曲目数、分析数、总/平均时长、歌手/专辑计数、年份分布和不可用数。
+- `WriteResult`：写操作、上游状态码及受影响的歌单/歌曲、点赞状态。
 
 Normalizer 只选择稳定、有明确用途的字段，不把原始上游 JSON 复制到 metadata。

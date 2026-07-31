@@ -483,10 +483,11 @@ wheels = [
 
 [[package]]
 name = "netease-music-mcp"
-version = "0.3.0"
+version = "0.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
+    { name = "cryptography" },
     { name = "httpx" },
     { name = "mcp", extra = ["cli"] },
     { name = "pydantic" },
@@ -504,6 +505,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiosqlite", specifier = ">=0.21,<1" },
+    { name = "cryptography", specifier = ">=43,<50" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.28.1,<2" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15,<2" },

@@ -1,14 +1,18 @@
 import httpx
 import pytest
+from httpx import QueryParams
 
 from netease_music_mcp.backends.netease_web import NeteaseWebBackend
+from netease_music_mcp.clients import weapi
 from netease_music_mcp.clients.authentication import AuthenticationProvider
 from netease_music_mcp.clients.http import NeteaseHttpClient
+from netease_music_mcp.clients.weapi import encrypt_weapi
 from netease_music_mcp.config import Settings
 from netease_music_mcp.domain.enums import (
     DetailLevel,
     HistoryScope,
     LibrarySection,
+    PlaylistTrackOperation,
     ReleaseArea,
     SearchCategory,
 )
@@ -27,6 +31,25 @@ def make_client(handler: httpx.MockTransport) -> NeteaseHttpClient:
         settings,
         AuthenticationProvider.from_settings(settings),
         transport=handler,
+    )
+
+
+def test_weapi_matches_net_ease_legacy_crypto_shape() -> None:
+    encrypted = encrypt_weapi(
+        {"name": "Temporary", "privacy": "0", "type": "NORMAL", "csrf_token": "csrf"},
+        secret_key="abcdefghijklmnop",
+    )
+    assert encrypted["params"] == (
+        "aNbIPI4MDxzwVBsIZU7wcKv4a2lP4Do+mwwRD8uLdV/"
+        "pk8Uc/EEh5XD1U3TZ3651hRiRUslX9ewuEHTz42ZJmHP2"
+        "eEiTKEe22Znvcrpz7AwxODjkcje4X6DV3ciUonfQF1rSVH"
+        "gd43ZLfL6OLszlHg=="
+    )
+    assert encrypted["encSecKey"] == (
+        "d15a1683c992095d0c234c19966605c5c5964911268bbeda8cb8d08d834913e59d53b323"
+        "58903a121b5fca784c1f5ae44951fd02524df58ecc98e52cc7cf8689b42c2e93ddf05b059"
+        "2512d87f5960467e2f086c018849d76014d323500e30f13ef4cafbb0cf5a66731a3f1776c"
+        "75ca35d0062dac70a3e33245afabcf47938487"
     )
 
 
@@ -331,3 +354,73 @@ async def test_discovery_and_liked_library_endpoints_are_normalized() -> None:
         "/api/song/like/get",
         "/api/song/detail/",
     ]
+
+
+@pytest.mark.asyncio
+async def test_write_endpoints_use_expected_provider_routes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[tuple[str, QueryParams]] = []
+    seen_cookies: list[str | None] = []
+    weapi_payloads: list[dict[str, object]] = []
+    real_encrypt = weapi.encrypt_weapi
+
+    def capture_payload(
+        payload: dict[str, object], *, secret_key: str | None = None
+    ) -> dict[str, str]:
+        weapi_payloads.append(dict(payload))
+        return real_encrypt(payload, secret_key=secret_key)
+
+    monkeypatch.setattr(weapi, "encrypt_weapi", capture_payload)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        form = QueryParams(request.content.decode())
+        seen.append((request.url.path, form))
+        seen_cookies.append(request.headers.get("cookie"))
+        if request.url.path == "/weapi/playlist/create":
+            return httpx.Response(200, json={"code": 200, "playlist": {"id": 77}}, request=request)
+        if request.url.path == "/api/playlist/manipulate/tracks":
+            return httpx.Response(200, json={"code": 200}, request=request)
+        if request.url.path == "/weapi/radio/like":
+            return httpx.Response(200, json={"code": 200}, request=request)
+        raise AssertionError(request.url.path)
+
+    settings = Settings(cookie="MUSIC_U=test; __csrf=csrf", user_id="99")
+    authentication = AuthenticationProvider.from_settings(settings)
+    client = NeteaseHttpClient(
+        settings,
+        authentication,
+        transport=httpx.MockTransport(handler),
+    )
+    backend = NeteaseWebBackend(client, authentication)
+    try:
+        created = await backend.create_playlist("Temporary", False)
+        added = await backend.update_playlist_tracks("77", PlaylistTrackOperation.ADD, ("12", "13"))
+        liked = await backend.set_song_like("12", True)
+    finally:
+        await backend.close()
+
+    assert created.playlist_id == "77"
+    assert added.operation is PlaylistTrackOperation.ADD
+    assert liked.liked is True
+    assert seen[0][0] == "/weapi/playlist/create"
+    assert set(seen[0][1]) == {"params", "encSecKey"}
+    assert seen_cookies[0] is not None and seen_cookies[0].endswith("os=pc")
+    assert weapi_payloads[0]["privacy"] == 0
+    assert weapi_payloads[0]["type"] == "NORMAL"
+    assert seen[1] == (
+        "/api/playlist/manipulate/tracks",
+        QueryParams(
+            {
+                "op": "add",
+                "pid": "77",
+                "trackIds": '["12","13"]',
+                "imme": "true",
+            }
+        ),
+    )
+    assert seen[2][0] == "/weapi/radio/like"
+    assert set(seen[2][1]) == {"params", "encSecKey"}
+    assert seen_cookies[2] is not None
+    assert "os=pc" in seen_cookies[2]
+    assert "appver=2.9.7" in seen_cookies[2]

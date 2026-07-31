@@ -19,6 +19,7 @@ from netease_music_mcp.domain.models import (
     SearchPage,
     SimilarSongsPage,
     SongDetail,
+    WriteResult,
 )
 from netease_music_mcp.server import create_server
 
@@ -35,6 +36,9 @@ EXPECTED_TOOLS = {
     "get_similar_songs",
     "get_new_songs",
     "get_rankings",
+    "create_playlist",
+    "update_playlist_tracks",
+    "set_song_like",
 }
 EXPECTED_RESOURCE_TEMPLATES = {
     "netease://song/{id}",
@@ -56,10 +60,10 @@ def fake_adapter():
 
 
 @pytest.mark.asyncio
-async def test_tools_list_has_exactly_twelve_valid_schemas() -> None:
+async def test_tools_list_has_exactly_fifteen_valid_schemas() -> None:
     tools = await fake_adapter().mcp.list_tools()
     assert {tool.name for tool in tools} == EXPECTED_TOOLS
-    assert len(tools) == 12
+    assert len(tools) == 15
     for tool in tools:
         Draft202012Validator.check_schema(tool.inputSchema)
         assert tool.outputSchema is not None
@@ -79,6 +83,12 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     similar = await mcp.call_tool("get_similar_songs", {"song_id": "1", "page_size": 1})
     releases = await mcp.call_tool("get_new_songs", {"page_size": 1})
     rankings = await mcp.call_tool("get_rankings", {"page_size": 1})
+    created = await mcp.call_tool("create_playlist", {"name": "fixture", "confirm": True})
+    added = await mcp.call_tool(
+        "update_playlist_tracks",
+        {"playlist_id": "30", "operation": "add", "song_ids": ["1"], "confirm": True},
+    )
+    liked = await mcp.call_tool("set_song_like", {"song_id": "1", "liked": True, "confirm": True})
     assert isinstance(search, CallToolResult)
     assert isinstance(songs, CallToolResult)
     assert isinstance(playlist, CallToolResult)
@@ -88,6 +98,9 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     assert isinstance(similar, CallToolResult)
     assert isinstance(releases, CallToolResult)
     assert isinstance(rankings, CallToolResult)
+    assert isinstance(created, CallToolResult)
+    assert isinstance(added, CallToolResult)
+    assert isinstance(liked, CallToolResult)
     assert SearchPage.model_validate(search.structuredContent)
     assert GetSongsResult.model_validate(songs.structuredContent)
     assert PlaylistDetail.model_validate(playlist.structuredContent)
@@ -97,6 +110,9 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     assert SimilarSongsPage.model_validate(similar.structuredContent)
     assert NewSongsPage.model_validate(releases.structuredContent)
     assert RankingPage.model_validate(rankings.structuredContent)
+    assert WriteResult.model_validate(created.structuredContent)
+    assert WriteResult.model_validate(added.structuredContent)
+    assert WriteResult.model_validate(liked.structuredContent)
     for result in (
         search,
         songs,
@@ -107,6 +123,9 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
         similar,
         releases,
         rankings,
+        created,
+        added,
+        liked,
     ):
         assert len(result.content) == 1
         assert len(result.content[0].text) < 80  # type: ignore[union-attr]
