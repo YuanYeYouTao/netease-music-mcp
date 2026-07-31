@@ -21,6 +21,7 @@ class LyricsService(ServiceBase):
         offset: int = 0,
         limit: int | None = None,
     ) -> LyricsDocument:
+        self.require_supported("get_lyrics")
         normalized_id = self.identifier(song_id, "song_id")
         resolved_limit = self.settings.default_lyrics_limit if limit is None else limit
         if offset < 0:

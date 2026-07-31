@@ -58,6 +58,7 @@ from netease_music_mcp.domain.models import (
 )
 from netease_music_mcp.domain.pagination import PageInfo, PageRequest
 
+from .base import ALL_BACKEND_OPERATIONS
 from .normalizer import NeteaseNormalizer
 
 ProviderT = TypeVar("ProviderT", bound=BaseModel)
@@ -70,6 +71,7 @@ class NeteaseWebBackend:
     """
 
     name = "netease-web"
+    supported_operations = ALL_BACKEND_OPERATIONS
     _SEARCH_TYPES: ClassVar[dict[SearchCategory, int]] = {
         SearchCategory.SONG: 1,
         SearchCategory.ALBUM: 10,

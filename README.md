@@ -4,7 +4,7 @@
 结构化的方式提供歌曲、歌手、专辑、歌单、歌词和登录用户音乐库数据，可供 Claude Desktop、
 Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
-当前开发版本：`0.4.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
+当前开发版本：`0.5.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
@@ -13,7 +13,7 @@ Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
 ## 安装
 
-需要 Python 3.12 与 [uv](https://docs.astral.sh/uv/)：
+本地开发需要 Python 3.12 与 [uv](https://docs.astral.sh/uv/)：
 
 ```bash
 git clone <repository-url> netease-music-mcp
@@ -23,6 +23,11 @@ uv sync --all-extras
 
 公开查询无需 Cookie。访问私人音乐库前，将 `.env.example` 复制为 `.env` 并配置
 `NETEASE_COOKIE` 与 `NETEASE_USER_ID`。服务不会自动读取浏览器 Cookie。
+
+Windows 与 macOS 部署建议直接使用 Docker Desktop；仅用 `.env` 启动容器时宿主机不需要 Python，
+网易云 Cookie 通过项目目录的 `.env` 注入容器。Docker Compose 使用具名缓存卷，不依赖宿主机路径格式。
+如果使用下方 `auth` 宿主机导入命令，则宿主机需要 Python 3.12 与 uv；Keychain/DPAPI 不能在
+Linux 容器内部代替宿主机读取。
 
 ## 启动
 
@@ -52,6 +57,31 @@ uv run netease-music-mcp cache clear
 
 `config` 仅显示非敏感值、配置来源和 Cookie 是否已配置，不会显示 Cookie 内容。
 `doctor` 检查配置、缓存可写性、公开查询和（已配置时）登录状态。
+
+## 宿主机本地认证导入
+
+Windows/macOS 桌面客户端登录态可由宿主机在运行前读取。导入器只读取网易云桌面客户端的
+本地 MMKV Cookie 归档，并兼容 CEF Chromium Cookie 数据库；首次运行必须确认。读取加密的
+CEF Cookie 时，macOS 使用 Keychain，Windows 使用 DPAPI。它不会扫描浏览器，不会打印 Cookie，
+也不会把 Cookie 写入仓库或镜像。
+
+仅查看脱敏结果：
+
+```bash
+uv run netease-music-mcp auth import-local
+```
+
+确认后直接以一次性环境变量启动 Docker（默认重新构建镜像）：
+
+```bash
+uv run netease-music-mcp auth run-docker --detach
+```
+
+`run-docker` 只把 Cookie 传给本次 `docker compose` 子进程；接口请求使用固定的 `appver=2.9.7`，
+导入器不落盘。
+使用 `--detach` 时，Cookie 会随运行中的本地容器存在；停止后执行 `docker compose down` 清理。
+非交互环境必须显式使用 `--yes`，否则导入会拒绝执行。客户端未登录、存储不存在或系统密钥
+访问失败时会返回明确错误，不会使用空 Cookie 继续启动。
 
 ## 十五个工具
 
@@ -156,12 +186,19 @@ HTTP 示例：
 ## Docker
 
 ```bash
-docker build -t netease-music-mcp:0.4.0 .
+docker build -t netease-music-mcp:0.5.0 .
 docker compose up --build
 ```
 
-Compose 从本地 `.env` 读取配置，将 SQLite 缓存放入具名卷，并暴露可配置端口。容器以
-非 root 用户运行，健康检查只检查 TCP 监听，不调用真实搜索接口。
+Windows PowerShell 使用同样的 Docker 命令；Cookie 可用以下命令准备：
+
+```powershell
+Copy-Item .env.example .env
+docker compose up --build
+```
+
+macOS、Windows 和 Linux 的 Compose 行为保持一致：从本地 `.env` 读取配置，将 SQLite 缓存放入
+具名卷，并暴露可配置端口。容器以非 root 用户运行，健康检查只检查 TCP 监听，不调用真实搜索接口。
 
 ## 故障排查
 

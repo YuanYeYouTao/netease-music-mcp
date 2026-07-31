@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -13,6 +14,7 @@ from netease_music_mcp.clients import AuthenticationProvider, NeteaseHttpClient
 from netease_music_mcp.config import Settings, Transport
 from netease_music_mcp.domain.errors import MusicMCPError
 from netease_music_mcp.lifespan import create_cache
+from netease_music_mcp.local_auth import LocalAuthError, LocalAuthSnapshot, read_local_auth
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -29,6 +31,31 @@ def _parser() -> argparse.ArgumentParser:
     cache_subcommands = cache.add_subparsers(dest="cache_command", required=True)
     cache_subcommands.add_parser("clear", help="Clear cached data")
     cache_subcommands.add_parser("stats", help="Show cache statistics")
+
+    auth = subcommands.add_parser("auth", help="Manage host-side desktop authentication")
+    auth_subcommands = auth.add_subparsers(dest="auth_command", required=True)
+    import_local = auth_subcommands.add_parser(
+        "import-local", help="Read the signed-in NetEase desktop client on this host"
+    )
+    import_local.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm local credential access without an interactive prompt",
+    )
+    run_docker = auth_subcommands.add_parser(
+        "run-docker", help="Import local auth and start Docker Compose for this run"
+    )
+    run_docker.add_argument(
+        "--yes",
+        action="store_true",
+        help="Confirm local credential access without an interactive prompt",
+    )
+    run_docker.add_argument(
+        "--no-build", action="store_true", help="Do not rebuild the Docker image"
+    )
+    run_docker.add_argument(
+        "--detach", action="store_true", help="Start Docker Compose in the background"
+    )
     return parser
 
 
@@ -152,8 +179,65 @@ async def _doctor(settings: Settings) -> int:
     return 1 if any(not item["ok"] and item["critical"] for item in checks) else 0
 
 
+def _confirm_local_auth(approved: bool) -> None:
+    if approved:
+        return
+    if not sys.stdin.isatty():
+        raise LocalAuthError(
+            "local credential access needs confirmation; rerun with --yes from a controlled host"
+        )
+    try:
+        answer = input("读取本机网易云桌面客户端登录 Cookie, 并仅注入本次运行? [y/N] ")
+    except (EOFError, KeyboardInterrupt) as exc:
+        raise LocalAuthError("local credential access was cancelled") from exc
+    if answer.strip().casefold() not in {"y", "yes"}:
+        raise LocalAuthError("local credential access was cancelled")
+
+
+def _auth_snapshot_output(snapshot: LocalAuthSnapshot) -> dict[str, Any]:
+    return {
+        "source": snapshot.source,
+        "cookie_configured": True,
+        "cookie_names": list(snapshot.cookie_names),
+        "persisted": False,
+    }
+
+
+def _run_docker_with_snapshot(snapshot: LocalAuthSnapshot, args: argparse.Namespace) -> int:
+    compose_file = Path("compose.yaml")
+    if not compose_file.is_file():
+        raise LocalAuthError("compose.yaml was not found in the current directory")
+    environment = os.environ.copy()
+    environment["NETEASE_COOKIE"] = snapshot.cookie
+    command = ["docker", "compose", "up"]
+    if not args.no_build:
+        command.append("--build")
+    if args.detach:
+        command.append("--detach")
+    try:
+        completed = subprocess.run(command, env=environment, check=False)
+    except OSError as exc:
+        raise LocalAuthError("docker compose could not be started") from exc
+    return completed.returncode
+
+
+def _auth_command(args: argparse.Namespace) -> int:
+    _confirm_local_auth(args.yes)
+    snapshot = read_local_auth()
+    if args.auth_command == "import-local":
+        print(json.dumps(_auth_snapshot_output(snapshot), ensure_ascii=False, indent=2))
+        return 0
+    return _run_docker_with_snapshot(snapshot, args)
+
+
 def main() -> None:
     args = _parser().parse_args()
+    if args.command == "auth":
+        try:
+            raise SystemExit(_auth_command(args))
+        except LocalAuthError as exc:
+            print(f"local auth error: {exc}", file=sys.stderr)
+            raise SystemExit(1) from exc
     try:
         settings = _settings_with_cli(args)
     except ValidationError as exc:

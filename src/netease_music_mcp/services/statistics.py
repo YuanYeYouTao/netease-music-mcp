@@ -14,6 +14,7 @@ class StatisticsService:
     async def get_playlist_statistics(
         self, playlist_id: str, track_limit: int | None = None
     ) -> PlaylistStatistics:
+        self.catalog.require_supported("get_playlist_statistics")
         settings = self.catalog.settings
         limit = settings.max_statistics_tracks if track_limit is None else track_limit
         if limit < 1 or limit > settings.max_statistics_tracks:

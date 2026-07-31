@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 
 from netease_music_mcp.application import MusicApplication
+from netease_music_mcp.backends.base import CORE_BACKEND_OPERATIONS
 from netease_music_mcp.backends.fake import FakeMusicCatalogBackend
 from netease_music_mcp.cache.memory import MemoryCacheBackend
 from netease_music_mcp.clients.authentication import AuthenticationProvider
@@ -156,6 +157,24 @@ class CountingFakeBackend(FakeMusicCatalogBackend):
     async def get_songs(self, *args: object, **kwargs: object):
         self.song_calls += 1
         return await super().get_songs(*args, **kwargs)
+
+
+class CoreOnlyFakeBackend(FakeMusicCatalogBackend):
+    supported_operations = CORE_BACKEND_OPERATIONS
+
+
+@pytest.mark.asyncio
+async def test_unsupported_backend_capability_is_not_an_empty_result(
+    fake_settings: Settings,
+) -> None:
+    authentication = AuthenticationProvider.from_settings(fake_settings)
+    app = MusicApplication(
+        CoreOnlyFakeBackend(), MemoryCacheBackend(), fake_settings, authentication
+    )
+    with pytest.raises(UnsupportedOperationError, match="get_recommendations"):
+        await app.get_recommendations()
+    with pytest.raises(UnsupportedOperationError, match="liked_songs"):
+        await app.get_user_library(LibrarySection.LIKED_SONGS)
 
 
 @pytest.mark.asyncio

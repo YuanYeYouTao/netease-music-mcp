@@ -16,7 +16,8 @@ MCP Transport → MCP Tool/Resource Adapter → Application Service
 - Domain：严格、冻结的 Pydantic v2 模型、枚举、ID、分页和异常；不依赖 MCP、HTTP、环境变量
   或数据库。
 - Backend：`MusicCatalogBackend` 隔离提供方。`NeteaseWebBackend` 将统一分页转换为上游参数；
-  `FakeMusicCatalogBackend` 使默认测试完全离线。
+  `FakeMusicCatalogBackend` 使默认测试完全离线。Backend 通过 `supported_operations` 明确声明
+  能力；服务层在调用前返回 `unsupported_operation`，不会把未实现能力折叠为空列表。
 - Client/Normalizer：共享 `httpx.AsyncClient` 管理连接、Cookie、超时和重试；Provider Model
   验证响应后，由 Normalizer 生成领域模型。
 - Cache：只保存规范化领域 JSON；键包含 Backend、操作、规范化参数、认证作用域、模型版本和
