@@ -1,17 +1,19 @@
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 from netease_music_mcp.application import MusicApplication
 from netease_music_mcp.domain.enums import DetailLevel
 from netease_music_mcp.domain.errors import ResourceNotFoundError
+from netease_music_mcp.tools.common import translate_music_resource_errors
 
 
-def register(server: FastMCP[object], application: MusicApplication) -> None:
+def register(server: MCPServer[object], application: MusicApplication) -> None:
     @server.resource(
         "netease://song/{id}",
         name="song",
         description="Full metadata for one NetEase song.",
         mime_type="application/json",
     )
+    @translate_music_resource_errors
     async def song(id: str) -> str:
         result = await application.get_songs((id,), DetailLevel.FULL)
         if not result.songs:
@@ -24,6 +26,7 @@ def register(server: FastMCP[object], application: MusicApplication) -> None:
         description="Metadata for one NetEase album without its track list.",
         mime_type="application/json",
     )
+    @translate_music_resource_errors
     async def album(id: str) -> str:
         return (await application.get_album(id)).model_dump_json(indent=2)
 
@@ -33,6 +36,7 @@ def register(server: FastMCP[object], application: MusicApplication) -> None:
         description="Metadata for one NetEase artist without top songs.",
         mime_type="application/json",
     )
+    @translate_music_resource_errors
     async def artist(id: str) -> str:
         return (await application.get_artist(id)).model_dump_json(indent=2)
 
@@ -42,5 +46,6 @@ def register(server: FastMCP[object], application: MusicApplication) -> None:
         description="Metadata for one NetEase playlist without its track list.",
         mime_type="application/json",
     )
+    @translate_music_resource_errors
     async def playlist(id: str) -> str:
         return (await application.get_playlist(id)).model_dump_json(indent=2)

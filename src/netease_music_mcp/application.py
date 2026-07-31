@@ -49,7 +49,7 @@ class MusicApplication:
         self.library = LibraryService(backend, cache, settings, authentication)
         self.lyrics = LyricsService(backend, cache, settings)
         self.statistics = StatisticsService(self.catalog)
-        self.writes = WriteService(backend, settings, authentication)
+        self.writes = WriteService(backend, cache, settings, authentication)
 
     async def music_search(
         self,

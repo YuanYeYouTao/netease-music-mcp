@@ -17,8 +17,8 @@ async def test_schema_and_typical_results_remain_bounded() -> None:
                 {
                     "name": tool.name,
                     "description": tool.description,
-                    "input": tool.inputSchema,
-                    "output": tool.outputSchema,
+                    "input": tool.input_schema,
+                    "output": tool.output_schema,
                 }
                 for tool in tools
             ],
@@ -39,8 +39,8 @@ async def test_schema_and_typical_results_remain_bounded() -> None:
     assert isinstance(playlist, CallToolResult)
     assert isinstance(lyrics, CallToolResult)
     assert schema_characters < 45_000
-    assert len(json.dumps(search.structuredContent, default=str)) < 3_000
-    assert len(json.dumps(detail.structuredContent, default=str)) < 2_000
-    assert len(json.dumps(playlist.structuredContent, default=str)) < 4_000
-    assert len(json.dumps(lyrics.structuredContent, default=str)) < 2_000
+    assert len(json.dumps(search.structured_content, default=str)) < 3_000
+    assert len(json.dumps(detail.structured_content, default=str)) < 2_000
+    assert len(json.dumps(playlist.structured_content, default=str)) < 4_000
+    assert len(json.dumps(lyrics.structured_content, default=str)) < 2_000
     assert all(len(result.content[0].text) < 80 for result in (search, detail, playlist, lyrics))  # type: ignore[union-attr]

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from pydantic import Field
 
 from netease_music_mcp.application import MusicApplication
@@ -10,7 +10,7 @@ from netease_music_mcp.domain.models import UserLibraryPage
 from .common import translate_music_errors
 
 
-def register(server: FastMCP[object], application: MusicApplication) -> None:
+def register(server: MCPServer[object], application: MusicApplication) -> None:
     @server.tool(
         name="get_user_library",
         description="Read one authenticated, paginated section of a user's music library.",

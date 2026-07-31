@@ -1,8 +1,10 @@
 import json
+from typing import Literal
 
 import pytest
 from jsonschema.validators import Draft202012Validator
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp import Client
+from mcp.server.mcpserver.exceptions import ResourceError, ToolError
 from mcp.types import CallToolResult
 
 from netease_music_mcp.config import Settings
@@ -65,9 +67,9 @@ async def test_tools_list_has_exactly_fifteen_valid_schemas() -> None:
     assert {tool.name for tool in tools} == EXPECTED_TOOLS
     assert len(tools) == 15
     for tool in tools:
-        Draft202012Validator.check_schema(tool.inputSchema)
-        assert tool.outputSchema is not None
-        Draft202012Validator.check_schema(tool.outputSchema)
+        Draft202012Validator.check_schema(tool.input_schema)
+        assert tool.output_schema is not None
+        Draft202012Validator.check_schema(tool.output_schema)
         assert tool.description is not None and len(tool.description) <= 120
 
 
@@ -101,18 +103,18 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     assert isinstance(created, CallToolResult)
     assert isinstance(added, CallToolResult)
     assert isinstance(liked, CallToolResult)
-    assert SearchPage.model_validate(search.structuredContent)
-    assert GetSongsResult.model_validate(songs.structuredContent)
-    assert PlaylistDetail.model_validate(playlist.structuredContent)
-    assert LyricsDocument.model_validate(lyrics.structuredContent)
-    assert PlaylistStatistics.model_validate(statistics.structuredContent)
-    assert RecommendationPage.model_validate(recommendations.structuredContent)
-    assert SimilarSongsPage.model_validate(similar.structuredContent)
-    assert NewSongsPage.model_validate(releases.structuredContent)
-    assert RankingPage.model_validate(rankings.structuredContent)
-    assert WriteResult.model_validate(created.structuredContent)
-    assert WriteResult.model_validate(added.structuredContent)
-    assert WriteResult.model_validate(liked.structuredContent)
+    assert SearchPage.model_validate(search.structured_content)
+    assert GetSongsResult.model_validate(songs.structured_content)
+    assert PlaylistDetail.model_validate(playlist.structured_content)
+    assert LyricsDocument.model_validate(lyrics.structured_content)
+    assert PlaylistStatistics.model_validate(statistics.structured_content)
+    assert RecommendationPage.model_validate(recommendations.structured_content)
+    assert SimilarSongsPage.model_validate(similar.structured_content)
+    assert NewSongsPage.model_validate(releases.structured_content)
+    assert RankingPage.model_validate(rankings.structured_content)
+    assert WriteResult.model_validate(created.structured_content)
+    assert WriteResult.model_validate(added.structured_content)
+    assert WriteResult.model_validate(liked.structured_content)
     for result in (
         search,
         songs,
@@ -135,7 +137,7 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
 async def test_resource_templates_return_valid_bounded_details() -> None:
     mcp = fake_adapter().mcp
     templates = await mcp.list_resource_templates()
-    assert {template.uriTemplate for template in templates} == EXPECTED_RESOURCE_TEMPLATES
+    assert {template.uri_template for template in templates} == EXPECTED_RESOURCE_TEMPLATES
     assert await mcp.list_resources() == []
 
     song = next(iter(await mcp.read_resource("netease://song/1")))
@@ -154,8 +156,13 @@ async def test_resource_templates_return_valid_bounded_details() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_song_resource_is_an_error() -> None:
-    with pytest.raises(ValueError, match="song 404 was not found"):
+    with pytest.raises(ResourceError) as captured:
         await fake_adapter().mcp.read_resource("netease://song/404")
+    assert json.loads(str(captured.value)) == {
+        "error_code": "not_found",
+        "message": "song 404 was not found",
+        "retryable": False,
+    }
 
 
 @pytest.mark.asyncio
@@ -175,3 +182,22 @@ async def test_server_instructions_are_compact() -> None:
     instructions = fake_adapter().mcp.instructions
     assert instructions is not None
     assert len(instructions) <= 100
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["auto", "legacy"])
+async def test_in_memory_client_compatibility(mode: Literal["auto", "legacy"]) -> None:
+    adapter = fake_adapter()
+    try:
+        async with Client(adapter.mcp, mode=mode) as client:
+            assert client.server_info is not None
+            assert client.server_info.version == "1.0.0"
+            result = await client.call_tool(
+                "music_search", {"query": "Example", "category": "song"}
+            )
+            resource = await client.read_resource("netease://song/1")
+            assert result.is_error is False
+            assert SearchPage.model_validate(result.structured_content)
+            assert resource.contents[0].mime_type == "application/json"
+    finally:
+        await adapter.application.close()

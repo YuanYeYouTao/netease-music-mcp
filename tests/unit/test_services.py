@@ -124,13 +124,19 @@ async def test_write_operations_require_confirmation_and_restore_fake_state(
         await application.set_song_like("1")
     created = await application.create_playlist("temporary", confirm=True)
     assert created.playlist_id is not None
+    before_add = await application.get_playlist(created.playlist_id, True, 1, 4)
+    assert before_add.tracks == ()
     added = await application.update_playlist_tracks(
         created.playlist_id, PlaylistTrackOperation.ADD, ("1",), confirm=True
     )
     assert added.song_ids == ("1",)
+    after_add = await application.get_playlist(created.playlist_id, True, 1, 4)
+    assert [song.id for song in after_add.tracks] == ["1"]
     await application.update_playlist_tracks(
         created.playlist_id, PlaylistTrackOperation.REMOVE, ("1",), confirm=True
     )
+    after_remove = await application.get_playlist(created.playlist_id, True, 1, 4)
+    assert after_remove.tracks == ()
 
 
 @pytest.mark.asyncio

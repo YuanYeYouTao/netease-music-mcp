@@ -26,6 +26,6 @@
   `unsupported_operation`，不以空数据伪装成功。
 - 统一歌曲、歌手、专辑、歌单和用户歌库模型；核心能力为搜索、歌曲、专辑、歌手、歌单和用户歌单。
 
-## 1.0.0
+## 1.0.0（已实现）
 
 - MCP Python SDK v2 Adapter；保持 Domain、Service 与 Backend 不变，并增加完整兼容测试。

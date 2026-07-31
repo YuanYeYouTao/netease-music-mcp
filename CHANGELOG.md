@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 开始 1.0.0：升级至 MCP Python SDK v2，保持 Domain、Service、Backend、15 个工具和 4 个 Resource 不变；补充 stdio/Streamable HTTP 现代与 legacy 客户端兼容测试。
+- 修复写操作成功后同进程读取歌单、用户库或喜欢状态命中旧缓存的问题；写入成功后清理共享缓存并支持立即回读。
 - 开始 0.5.0：补充 backend 能力声明，未支持的工具操作返回 `unsupported_operation`；保持 15 个工具、
   4 个 Resource、统一领域模型和本地 Cookie 认证不变。
 - Docker Compose 镜像版本更新为 0.5.0，Windows 与 macOS 通过 Docker Desktop 使用同一运行方式。

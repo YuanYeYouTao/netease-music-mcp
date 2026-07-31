@@ -4,7 +4,7 @@
 结构化的方式提供歌曲、歌手、专辑、歌单、歌词和登录用户音乐库数据，可供 Claude Desktop、
 Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
-当前开发版本：`0.5.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
+当前开发版本：`1.0.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
@@ -186,7 +186,7 @@ HTTP 示例：
 ## Docker
 
 ```bash
-docker build -t netease-music-mcp:0.5.0 .
+docker build -t netease-music-mcp:1.0.0 .
 docker compose up --build
 ```
 

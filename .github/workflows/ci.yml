@@ -51,7 +51,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build image
-        run: docker build --tag netease-music-mcp:0.5.0 .
+        run: docker build --tag netease-music-mcp:1.0.0 .
 
       - name: Validate Compose configuration
         run: docker compose config --quiet
