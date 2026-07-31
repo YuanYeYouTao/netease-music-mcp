@@ -3,9 +3,10 @@ from contextlib import asynccontextmanager
 from typing import Protocol
 
 import anyio
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from starlette.applications import Starlette
 
+from netease_music_mcp import __version__
 from netease_music_mcp.application import MusicApplication
 from netease_music_mcp.config import Settings
 from netease_music_mcp.tools import register_all_resources, register_all_tools
@@ -23,18 +24,14 @@ class MCPServerAdapter(Protocol):
     def streamable_http_app(self) -> Starlette: ...
 
 
-class MCPV1ServerAdapter:
+class MCPV2ServerAdapter:
     def __init__(self, application: MusicApplication, settings: Settings) -> None:
         self.application = application
         self.settings = settings
-        self.mcp: FastMCP[object] = FastMCP(
-            "netease-music-mcp",
+        self.mcp: MCPServer[object] = MCPServer(
+            name="netease-music-mcp",
             instructions="Read-only structured NetEase Cloud Music metadata.",
-            host=settings.mcp_host,
-            port=settings.mcp_port,
-            streamable_http_path=settings.mcp_path,
-            stateless_http=True,
-            json_response=True,
+            version=__version__,
             log_level=settings.log_level,
         )
         self.register_tools(application)
@@ -58,7 +55,12 @@ class MCPV1ServerAdapter:
     def streamable_http_app(self) -> Starlette:
         """Build HTTP transport with process-owned application resources."""
 
-        app = self.mcp.streamable_http_app()
+        app = self.mcp.streamable_http_app(
+            streamable_http_path=self.settings.mcp_path,
+            json_response=True,
+            stateless_http=True,
+            host=self.settings.mcp_host,
+        )
         session_manager_lifespan = app.router.lifespan_context
 
         @asynccontextmanager
@@ -81,3 +83,7 @@ class MCPV1ServerAdapter:
             port=self.settings.mcp_port,
             log_level=self.settings.log_level.lower(),
         )
+
+
+# Keep the old import name available to callers that used the 0.x adapter.
+MCPV1ServerAdapter = MCPV2ServerAdapter

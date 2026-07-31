@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 from pydantic import Field
 
 from netease_music_mcp.application import MusicApplication
@@ -15,7 +15,7 @@ from netease_music_mcp.domain.models import (
 from .common import translate_music_errors
 
 
-def register(server: FastMCP[object], application: MusicApplication) -> None:
+def register(server: MCPServer[object], application: MusicApplication) -> None:
     @server.tool(
         name="get_recommendations",
         description="Read a page of NetEase's read-only recommended playlists.",

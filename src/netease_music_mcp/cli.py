@@ -245,9 +245,9 @@ def main() -> None:
         raise SystemExit(2) from exc
     if args.command == "serve":
         from netease_music_mcp.lifespan import create_application
-        from netease_music_mcp.mcp_adapter import MCPV1ServerAdapter
+        from netease_music_mcp.mcp_adapter import MCPV2ServerAdapter
 
-        adapter = MCPV1ServerAdapter(create_application(settings), settings)
+        adapter = MCPV2ServerAdapter(create_application(settings), settings)
         if settings.mcp_transport is Transport.STDIO:
             adapter.run_stdio()
         else:
