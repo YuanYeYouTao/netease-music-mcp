@@ -3,15 +3,15 @@
 依赖方向固定为：
 
 ```text
-MCP Transport → MCP Tool Adapter → Application Service
-                                      ↓
-                                  Domain Models
-                                      ↑
-                Cache ← MusicCatalogBackend → NetEase HTTP Client
+MCP Transport → MCP Tool/Resource Adapter → Application Service
+                                               ↓
+                                           Domain Models
+                                               ↑
+                         Cache ← MusicCatalogBackend → NetEase HTTP Client
 ```
 
 - MCP Adapter：唯一理解 FastMCP 生命周期、stdio 和 Streamable HTTP 的适配层。
-- Tool：只声明紧凑 Schema、接收参数、调用 `MusicApplication` 并返回领域模型。
+- Tool/Resource：声明紧凑 Schema 或 URI 模板、调用 `MusicApplication` 并返回领域模型。
 - Application Service：执行分页/批量上限验证、缓存策略、认证作用域和确定性统计。
 - Domain：严格、冻结的 Pydantic v2 模型、枚举、ID、分页和异常；不依赖 MCP、HTTP、环境变量
   或数据库。
@@ -32,8 +32,8 @@ Backend 与 Service 不需要重写。
 | 边界 | 值 | 来源 |
 | --- | --- | --- |
 | Python | `>=3.12` | 产品技术基线 |
-| MCP SDK | `>=1.28.1,<2` | 0.1.0 兼容目标 |
-| Tool 数量 | 8 | 0.1.0 产品范围 |
+| MCP SDK | `>=1.28.1,<2` | 0.2.0 兼容目标 |
+| Tool / Resource Template 数量 | 8 / 4 | 0.2.0 产品范围 |
 | ID 公共类型 | 十进制字符串 | 跨 Client 数字精度要求；上游 ID 语义 |
 | page | `>=1` | 统一一基分页模型 |
 | port | `1..65535` | TCP 协议 |

@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -27,6 +28,8 @@ async def test_streamable_http_initialize_list_and_call() -> None:
                         async with ClientSession(read, write) as session:
                             initialized = await session.initialize()
                             tools = await session.list_tools()
+                            resource_templates = await session.list_resource_templates()
+                            playlist = await session.read_resource("netease://playlist/30")
                             assert getattr(adapter.application.backend, "closed", False) is False
                             result = await session.call_tool(
                                 "get_playlist",
@@ -34,6 +37,10 @@ async def test_streamable_http_initialize_list_and_call() -> None:
                             )
                             assert initialized.serverInfo.name == "netease-music-mcp"
                             assert len(tools.tools) == 8
+                            assert len(resource_templates.resourceTemplates) == 4
+                            assert (
+                                json.loads(playlist.contents[0].text)["playlist"]["id"] == "30"  # type: ignore[union-attr]
+                            )
                             assert result.isError is False
                             assert result.structuredContent is not None
                             assert getattr(adapter.application.backend, "closed", False) is False
