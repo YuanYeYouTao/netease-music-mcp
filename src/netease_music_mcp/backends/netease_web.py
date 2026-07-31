@@ -234,8 +234,14 @@ class NeteaseWebBackend:
         self._check_embedded_code(payload)
         response = self._parse(ProviderAlbumResponse, payload)
         album = self._normalizer.album(response.album)
-        total = response.album.size or len(response.songs)
-        selected = response.songs[track_page.offset : track_page.offset + track_page.page_size]
+        songs = response.songs
+        if not songs:
+            album_payload = payload.get("album")
+            nested_songs = album_payload.get("songs") if isinstance(album_payload, dict) else None
+            if nested_songs:
+                songs = self._parse_list(ProviderSong, nested_songs)
+        total = response.album.size or len(songs)
+        selected = songs[track_page.offset : track_page.offset + track_page.page_size]
         tracks = tuple(self._normalizer.song(song) for song in selected) if include_tracks else ()
         return AlbumDetail(
             **album.model_dump(),

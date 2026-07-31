@@ -195,6 +195,56 @@ async def test_backend_search_uses_cloud_search_endpoint() -> None:
 
 
 @pytest.mark.asyncio
+async def test_album_tracks_support_nested_upstream_layout_and_local_paging() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/album/241937735"
+        return httpx.Response(
+            200,
+            json={
+                "code": 200,
+                "album": {
+                    "id": 241937735,
+                    "name": "弹舌合集",
+                    "size": 3,
+                    "artists": [{"id": 12028262, "name": "MC赵小六"}],
+                    "songs": [
+                        {
+                            "id": index,
+                            "name": f"弹舌 {index}",
+                            "artists": [{"id": 12028262, "name": "MC赵小六"}],
+                        }
+                        for index in range(1, 4)
+                    ],
+                },
+            },
+            request=request,
+        )
+
+    settings = Settings()
+    authentication = AuthenticationProvider.from_settings(settings)
+    client = NeteaseHttpClient(
+        settings,
+        authentication,
+        transport=httpx.MockTransport(handler),
+    )
+    backend = NeteaseWebBackend(client, authentication)
+    try:
+        result = await backend.get_album(
+            "241937735",
+            include_tracks=True,
+            track_page=PageRequest(page=2, page_size=2),
+        )
+    finally:
+        await backend.close()
+
+    assert result.name == "弹舌合集"
+    assert result.size == 3
+    assert [track.id for track in result.tracks] == ["3"]
+    assert result.track_page.total == 3
+    assert result.track_page.has_more is False
+
+
+@pytest.mark.asyncio
 async def test_playlist_library_normalizes_nulls_and_paginates_locally() -> None:
     seen: list[httpx.Request] = []
 

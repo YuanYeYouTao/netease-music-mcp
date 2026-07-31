@@ -17,6 +17,8 @@ from netease_music_mcp.domain.models import (
 
 from .common import ServiceBase
 
+_ALBUM_CACHE_OPERATION = "get_album:v2"
+
 
 class CatalogService(ServiceBase):
     def __init__(
@@ -142,7 +144,9 @@ class CatalogService(ServiceBase):
             "page": request.page,
             "page_size": request.page_size,
         }
-        key = self.cache_key("get_album", parameters)
+        # v2 invalidates details cached before nested ``album.songs`` became
+        # part of the supported upstream response layout.
+        key = self.cache_key(_ALBUM_CACHE_OPERATION, parameters)
         cached = await self.cache.get(key)
         if cached is not None:
             return AlbumDetail.model_validate_json(cached)
