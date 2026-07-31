@@ -2,7 +2,7 @@ from datetime import date
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
-from .enums import LibrarySection, SearchCategory
+from .enums import LibrarySection, ReleaseArea, SearchCategory
 from .pagination import PageInfo
 
 
@@ -116,6 +116,44 @@ class SearchPage(DomainModel):
     query: str
     category: SearchCategory
     items: tuple[SearchItem, ...]
+    page: PageInfo
+
+
+class RecommendationPage(DomainModel):
+    items: tuple[PlaylistSummary, ...]
+    page: PageInfo
+
+
+class SimilarSongsPage(DomainModel):
+    song_id: str
+    items: tuple[SongSummary, ...]
+    page: PageInfo
+
+
+class NewSongsPage(DomainModel):
+    area: ReleaseArea
+    items: tuple[SongSummary, ...]
+    page: PageInfo
+
+
+class RankingTrack(DomainModel):
+    id: str | None = None
+    title: str
+    artist: str | None = None
+
+
+class RankingSummary(DomainModel):
+    id: str
+    name: str
+    update_frequency: str | None = None
+    cover_url: AnyHttpUrl | None = None
+    track_count: int = Field(default=0, ge=0)
+    top_tracks: tuple[RankingTrack, ...] = ()
+    canonical_url: AnyHttpUrl
+
+
+class RankingPage(DomainModel):
+    items: tuple[RankingSummary, ...]
     page: PageInfo
 
 

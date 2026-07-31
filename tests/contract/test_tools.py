@@ -7,11 +7,18 @@ from mcp.types import CallToolResult
 
 from netease_music_mcp.config import Settings
 from netease_music_mcp.domain.models import (
+    AlbumDetail,
+    ArtistDetail,
     GetSongsResult,
     LyricsDocument,
+    NewSongsPage,
     PlaylistDetail,
     PlaylistStatistics,
+    RankingPage,
+    RecommendationPage,
     SearchPage,
+    SimilarSongsPage,
+    SongDetail,
 )
 from netease_music_mcp.server import create_server
 
@@ -24,6 +31,16 @@ EXPECTED_TOOLS = {
     "get_lyrics",
     "get_user_library",
     "get_playlist_statistics",
+    "get_recommendations",
+    "get_similar_songs",
+    "get_new_songs",
+    "get_rankings",
+}
+EXPECTED_RESOURCE_TEMPLATES = {
+    "netease://song/{id}",
+    "netease://album/{id}",
+    "netease://artist/{id}",
+    "netease://playlist/{id}",
 }
 
 
@@ -39,10 +56,10 @@ def fake_adapter():
 
 
 @pytest.mark.asyncio
-async def test_tools_list_has_exactly_eight_valid_schemas() -> None:
+async def test_tools_list_has_exactly_twelve_valid_schemas() -> None:
     tools = await fake_adapter().mcp.list_tools()
     assert {tool.name for tool in tools} == EXPECTED_TOOLS
-    assert len(tools) == 8
+    assert len(tools) == 12
     for tool in tools:
         Draft202012Validator.check_schema(tool.inputSchema)
         assert tool.outputSchema is not None
@@ -58,19 +75,68 @@ async def test_tool_outputs_are_structured_and_model_valid() -> None:
     playlist = await mcp.call_tool("get_playlist", {"playlist_id": "30"})
     lyrics = await mcp.call_tool("get_lyrics", {"song_id": "1", "limit": 2})
     statistics = await mcp.call_tool("get_playlist_statistics", {"playlist_id": "30"})
+    recommendations = await mcp.call_tool("get_recommendations", {"page_size": 1})
+    similar = await mcp.call_tool("get_similar_songs", {"song_id": "1", "page_size": 1})
+    releases = await mcp.call_tool("get_new_songs", {"page_size": 1})
+    rankings = await mcp.call_tool("get_rankings", {"page_size": 1})
     assert isinstance(search, CallToolResult)
     assert isinstance(songs, CallToolResult)
     assert isinstance(playlist, CallToolResult)
     assert isinstance(lyrics, CallToolResult)
     assert isinstance(statistics, CallToolResult)
+    assert isinstance(recommendations, CallToolResult)
+    assert isinstance(similar, CallToolResult)
+    assert isinstance(releases, CallToolResult)
+    assert isinstance(rankings, CallToolResult)
     assert SearchPage.model_validate(search.structuredContent)
     assert GetSongsResult.model_validate(songs.structuredContent)
     assert PlaylistDetail.model_validate(playlist.structuredContent)
     assert LyricsDocument.model_validate(lyrics.structuredContent)
     assert PlaylistStatistics.model_validate(statistics.structuredContent)
-    for result in (search, songs, playlist, lyrics, statistics):
+    assert RecommendationPage.model_validate(recommendations.structuredContent)
+    assert SimilarSongsPage.model_validate(similar.structuredContent)
+    assert NewSongsPage.model_validate(releases.structuredContent)
+    assert RankingPage.model_validate(rankings.structuredContent)
+    for result in (
+        search,
+        songs,
+        playlist,
+        lyrics,
+        statistics,
+        recommendations,
+        similar,
+        releases,
+        rankings,
+    ):
         assert len(result.content) == 1
         assert len(result.content[0].text) < 80  # type: ignore[union-attr]
+
+
+@pytest.mark.asyncio
+async def test_resource_templates_return_valid_bounded_details() -> None:
+    mcp = fake_adapter().mcp
+    templates = await mcp.list_resource_templates()
+    assert {template.uriTemplate for template in templates} == EXPECTED_RESOURCE_TEMPLATES
+    assert await mcp.list_resources() == []
+
+    song = next(iter(await mcp.read_resource("netease://song/1")))
+    album = next(iter(await mcp.read_resource("netease://album/20")))
+    artist = next(iter(await mcp.read_resource("netease://artist/10")))
+    playlist = next(iter(await mcp.read_resource("netease://playlist/30")))
+
+    assert SongDetail.model_validate_json(song.content)
+    assert AlbumDetail.model_validate_json(album.content).tracks == ()
+    assert ArtistDetail.model_validate_json(artist.content).top_songs == ()
+    assert PlaylistDetail.model_validate_json(playlist.content).tracks == ()
+    assert all(
+        resource.mime_type == "application/json" for resource in (song, album, artist, playlist)
+    )
+
+
+@pytest.mark.asyncio
+async def test_missing_song_resource_is_an_error() -> None:
+    with pytest.raises(ValueError, match="song 404 was not found"):
+        await fake_adapter().mcp.read_resource("netease://song/404")
 
 
 @pytest.mark.asyncio

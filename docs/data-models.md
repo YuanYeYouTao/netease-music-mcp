@@ -13,6 +13,8 @@
 - `PlaylistSummary` / `PlaylistDetail`：创建者、计数、标签、分页 tracks、可用权限数。
 - `LyricsLine` / `LyricsDocument`：时间戳对齐的原文/翻译/罗马音和 offset/limit 分页。
 - `SearchPage`、`UserLibraryPage`：统一 `PageInfo`。
+- `RecommendationPage`、`SimilarSongsPage`、`NewSongsPage`、`RankingPage`：发现内容统一分页；
+  排行榜只保留榜单元数据和上游提供的紧凑 Top 曲目。
 - `PlaylistStatistics`：曲目数、分析数、总/平均时长、歌手/专辑计数、年份分布和不可用数。
 
 Normalizer 只选择稳定、有明确用途的字段，不把原始上游 JSON 复制到 metadata。

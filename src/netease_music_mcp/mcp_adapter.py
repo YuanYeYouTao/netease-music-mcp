@@ -8,11 +8,13 @@ from starlette.applications import Starlette
 
 from netease_music_mcp.application import MusicApplication
 from netease_music_mcp.config import Settings
-from netease_music_mcp.tools import register_all_tools
+from netease_music_mcp.tools import register_all_resources, register_all_tools
 
 
 class MCPServerAdapter(Protocol):
     def register_tools(self, application: MusicApplication) -> None: ...
+
+    def register_resources(self, application: MusicApplication) -> None: ...
 
     def run_stdio(self) -> None: ...
 
@@ -36,9 +38,13 @@ class MCPV1ServerAdapter:
             log_level=settings.log_level,
         )
         self.register_tools(application)
+        self.register_resources(application)
 
     def register_tools(self, application: MusicApplication) -> None:
         register_all_tools(self.mcp, application)
+
+    def register_resources(self, application: MusicApplication) -> None:
+        register_all_resources(self.mcp, application)
 
     def run_stdio(self) -> None:
         anyio.run(self._run_stdio)

@@ -4,11 +4,11 @@
 结构化的方式提供歌曲、歌手、专辑、歌单、歌词和登录用户音乐库数据，可供 Claude Desktop、
 Codex、IDE Agent、Yuki 等 MCP Client 使用。
 
-当前版本：`0.1.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
+当前开发版本：`0.3.0`。本项目是独立的社区项目，不是网易云音乐官方项目，也未获得网易公司的
 认可或担保。所用 Web 接口不是公开稳定 API，可能随上游变更。
 
 项目不调用任何 LLM，不下载、播放或转发音频，不提供付费音频链接，也不绕过会员、版权、
-地区或 DRM 限制。0.1.0 中没有写操作、MCP Resources、Prompts、Sampling 或 Elicitation。
+地区或 DRM 限制。0.3.0 中没有写操作、Prompts、Sampling 或 Elicitation。
 
 ## 安装
 
@@ -52,12 +52,16 @@ uv run netease-music-mcp cache clear
 `config` 仅显示非敏感值、配置来源和 Cookie 是否已配置，不会显示 Cookie 内容。
 `doctor` 检查配置、缓存可写性、公开查询和（已配置时）登录状态。
 
-## 八个工具
+## 十二个工具
 
 | Tool | 用途 | 返回模型 |
 | --- | --- | --- |
 | `music_search` | 分页搜索歌曲、歌手、专辑或歌单 | `SearchPage` |
 | `get_songs` | 按输入顺序批量读取歌曲元数据 | `GetSongsResult` |
+| `get_recommendations` | 读取只读推荐歌单 | `RecommendationPage` |
+| `get_similar_songs` | 读取相似歌曲 | `SimilarSongsPage` |
+| `get_new_songs` | 按地区读取推荐新歌 | `NewSongsPage` |
+| `get_rankings` | 读取排行榜摘要和 Top 曲目 | `RankingPage` |
 | `get_album` | 读取专辑与可选的单页曲目 | `AlbumDetail` |
 | `get_artist` | 读取歌手与可选的限量热门歌曲 | `ArtistDetail` |
 | `get_playlist` | 读取歌单与可选的单页曲目 | `PlaylistDetail` |
@@ -70,11 +74,23 @@ uv run netease-music-mcp cache clear
 
 完整参数见 [docs/tools.md](docs/tools.md)，模型见 [docs/data-models.md](docs/data-models.md)。
 
+## 四类资源
+
+| URI 模板 | 内容 |
+| --- | --- |
+| `netease://song/{id}` | 单曲完整元数据 |
+| `netease://album/{id}` | 专辑元数据，不展开曲目 |
+| `netease://artist/{id}` | 歌手元数据，不展开热门歌曲 |
+| `netease://playlist/{id}` | 歌单元数据，不展开曲目 |
+
+资源以 `application/json` 返回，并复用工具的验证、缓存和错误处理路径。需要曲目列表或热门
+歌曲时，继续使用相应工具的显式分页/数量参数。
+
 ## 认证与数据边界
 
-无需登录：搜索、歌曲、歌手、专辑、公开歌单和歌词（以上游允许为准）。
+无需登录：搜索、歌曲、歌手、专辑、公开歌单、歌词、推荐、新歌速递和排行榜（以上游允许为准）。
 
-需要 Cookie：用户歌单、收藏歌手、收藏专辑、每日推荐和播放记录。`user_id` 未传时使用
+需要 Cookie：用户歌单、收藏歌手、收藏专辑、每日推荐、播放记录和喜欢的歌曲。`user_id` 未传时使用
 `NETEASE_USER_ID`；无登录态会返回 `authentication_required`，不会返回空列表伪装成功。
 
 可直接配置完整 `NETEASE_COOKIE`，或使用 `NETEASE_MUSIC_U` 与 `NETEASE_CSRF` 由认证组件
@@ -133,7 +149,7 @@ HTTP 示例：
 ## Docker
 
 ```bash
-docker build -t netease-music-mcp:0.1.0 .
+docker build -t netease-music-mcp:0.3.0 .
 docker compose up --build
 ```
 
